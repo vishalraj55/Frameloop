@@ -1,4 +1,4 @@
-<h1 align="center">Fullstack Social Media Platform</h1>
+<h1 align="center">Frameloop</h1>
 
 <p align="center">
 A scalable fullstack social media application built with Next.js and NestJS, featuring authentication, posts, stories, and a modular API-driven architecture.
