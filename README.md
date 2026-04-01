@@ -1,8 +1,8 @@
 <h1 align="center">Frameloop</h1>
 
-<p align="center">
+<!-- <p align="left">
 A scalable fullstack social media application built with Next.js and NestJS, featuring authentication, posts, stories, and a modular API-driven architecture.
-</p>
+</p> -->
 
 <p align="center">
   <img src="https://img.shields.io/badge/Next.js-Frontend-000000?style=flat&logo=next.js&logoColor=white" />
@@ -11,7 +11,7 @@ A scalable fullstack social media application built with Next.js and NestJS, fea
   <img src="https://img.shields.io/badge/Prisma-ORM-2D3748?style=flat&logo=prisma&logoColor=white" />
   <img src="https://img.shields.io/badge/TypeScript-4%2B-3178C6?style=flat&logo=typescript&logoColor=white" />
   <img src="https://img.shields.io/badge/pnpm-Package%20Manager-F69220?style=flat&logo=pnpm&logoColor=white" />
-  <img src="https://img.shields.io/badge/Status-Active-success" />
+  <!-- <img src="https://img.shields.io/badge/Status-Active-success" /> -->
 </p>
 
 ---
