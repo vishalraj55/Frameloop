@@ -58,10 +58,12 @@ export default function FeedPage() {
               key={post.id}
               id={post.id}
               username={post.author.username}
-              avatar={post.author.avatarUrl ? `${API_URL}${post.author.avatarUrl}` : null}
-              imageUrl={`${API_URL}${post.imageUrl}`}
+              avatar={post.author.avatarUrl ?? null}
+              imageUrl={post.imageUrl}
               caption={post.caption ?? ''}
-              likes={post.likes.length} createdAt={''}            />
+              likes={post.likes.length}
+              createdAt={''}
+            />
           ))
         )}
       </div>

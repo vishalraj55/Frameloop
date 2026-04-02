@@ -6,7 +6,7 @@ import { useRef, useState } from "react";
 import {
   Heart,
   MessageCircle,
-  Send,
+  // Send,
   Bookmark,
   MoreHorizontal,
 } from "lucide-react";
@@ -126,9 +126,9 @@ export default function Post({
         <button className="flex items-center">
           <MessageCircle size={24} className="text-white" />
         </button>
-        <button className="flex items-center">
+        {/* <button className="flex items-center">
           <Send size={24} className="text-white" />
-        </button>
+        </button> */}
         <div className="flex-1" />
         <button onClick={toggleSave} className="flex items-center">
           <Bookmark

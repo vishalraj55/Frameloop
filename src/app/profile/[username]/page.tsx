@@ -101,7 +101,7 @@ export default function ProfilePage() {
               <div className="relative w-18.5 h-18.5 rounded-full overflow-hidden bg-[#1c1c1c]">
                 {profile.avatarUrl ? (
                   <Image
-                    src={`${process.env.NEXT_PUBLIC_API_URL}${profile.avatarUrl}`}
+                    src={profile.avatarUrl}
                     alt={profile.username}
                     fill
                     className="object-cover"
@@ -217,7 +217,7 @@ export default function ProfilePage() {
             className="relative aspect-square"
           >
             <Image
-              src={`${process.env.NEXT_PUBLIC_API_URL}${post.imageUrl}`}
+              src={post.imageUrl}
               alt={post.caption ?? ''}
               fill
               className="object-cover"

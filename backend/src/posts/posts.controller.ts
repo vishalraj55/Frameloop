@@ -6,11 +6,12 @@ import {
   Param,
   UploadedFile,
   UseInterceptors,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
-import type { Request } from 'express';
+import { memoryStorage } from 'multer';
+import { Readable } from 'stream';
+import { v2 as cloudinary } from 'cloudinary';
 import { PostsService } from './posts.service';
 import { LikeDto } from './dto/like.dto';
 
@@ -24,27 +25,27 @@ export class PostsController {
   }
 
   @Post()
-  @UseInterceptors(
-    FileInterceptor('image', {
-      storage: diskStorage({
-        destination: './uploads',
-        filename: (
-          _req: Request,
-          file: Express.Multer.File,
-          cb: (error: Error | null, filename: string) => void,
-        ) => {
-          const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
-          cb(null, unique + extname(file.originalname));
-        },
-      }),
-    }),
-  )
-  create(
+  @UseInterceptors(FileInterceptor('image', { storage: memoryStorage() }))
+  async create(
     @UploadedFile() file: Express.Multer.File,
     @Body() body: { caption?: string; authorId: string },
   ) {
+    if (!file) throw new BadRequestException('Image is required');
+
+    const imageUrl = await new Promise<string>((resolve, reject) => {
+      const upload = cloudinary.uploader.upload_stream(
+        { folder: 'posts' },
+        (error, result) => {
+          if (error || !result)
+            return reject(new Error(error?.message ?? 'Upload failed'));
+          resolve(result.secure_url);
+        },
+      );
+      Readable.from(file.buffer).pipe(upload);
+    });
+
     return this.postsService.createPost({
-      imageUrl: `/uploads/${file.filename}`,
+      imageUrl,
       caption: body.caption,
       authorId: body.authorId,
     });

@@ -20,12 +20,12 @@ export default async function PostPage({
     <main className="min-h-screen bg-black flex justify-center py-8">
       <Post
         id={post.id}
-        username={post.user.username}
-        avatar={post.user.avatarUrl}
+        username={post.author.username}
+        avatar={post.author.avatarUrl ?? null}
         imageUrl={post.imageUrl}
-        caption={post.caption}
-        likes={post.likesCount}
-        createdAt={post.createdAt}
+        caption={post.caption ?? ''}
+        likes={post.likesCount ?? 0}
+        createdAt={post.createdAt ?? ''}
       />
     </main>
   );
