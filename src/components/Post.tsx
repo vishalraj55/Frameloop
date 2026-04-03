@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRef, useState } from "react";
+import CommentSheet from "./CommentSheet";
 import {
   Heart,
   MessageCircle,
@@ -32,6 +33,7 @@ type PostProps = {
   caption?: string;
   likes: number;
   createdAt: string;
+  priority?: boolean;
 };
 
 export default function Post({
@@ -42,6 +44,7 @@ export default function Post({
   caption,
   likes,
   createdAt,
+  priority = false,
 }: PostProps) {
   const lastTapRef = useRef(0);
 
@@ -55,7 +58,9 @@ export default function Post({
 
   const [liked, setLiked] = useState(() => getStored(likedKey).includes(id));
   const [saved, setSaved] = useState(() => getStored(savedKey).includes(id));
-  const [likeCount, setLikeCount] = useState(likes + (getStored(likedKey).includes(id) ? 1 : 0));
+  const [likeCount, setLikeCount] = useState(
+    likes + (getStored(likedKey).includes(id) ? 1 : 0),
+  );
 
   function toggleLike() {
     const arr = getStored(likedKey);
@@ -79,6 +84,7 @@ export default function Post({
     if (now - lastTapRef.current < 300 && !liked) toggleLike();
     lastTapRef.current = now;
   }
+  const [commentOpen, setCommentOpen] = useState(false);
 
   return (
     <article className="border-b border-zinc-800">
@@ -111,6 +117,8 @@ export default function Post({
           width={640}
           height={640}
           className="w-full block"
+          priority={priority}
+          loading={priority ? "eager" : "lazy"}
         />
       </div>
 
@@ -123,7 +131,10 @@ export default function Post({
             fill={liked ? "#ed4956" : "none"}
           />
         </button>
-        <button className="flex items-center">
+        <button
+          onClick={() => setCommentOpen(true)}
+          className="flex items-center"
+        >
           <MessageCircle size={24} className="text-white" />
         </button>
         {/* <button className="flex items-center">
@@ -156,6 +167,13 @@ export default function Post({
       <div className="px-3 pb-3 text-[11px] text-zinc-500 uppercase tracking-wide">
         {getRelativeTime(createdAt)}
       </div>
+
+      {/* Comments sheet */}
+      <CommentSheet
+        postId={id}
+        open={commentOpen}
+        onClose={() => setCommentOpen(false)}
+      />
     </article>
   );
 }

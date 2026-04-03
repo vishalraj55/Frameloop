@@ -1,10 +1,12 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState } from 'react';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import Image from 'next/image';
-import { Camera } from 'lucide-react';
+import { useEffect, useRef, useState } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { Camera } from "lucide-react";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 interface ProfileForm {
   fullName: string;
@@ -13,14 +15,14 @@ interface ProfileForm {
 }
 
 export default function EditProfilePage() {
-  const { data: session, update } = useSession();
+  const { data: session, update, status } = useSession();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState<ProfileForm>({
-    fullName: '',
-    username: '',
-    bio: '',
+    fullName: "",
+    username: "",
+    bio: "",
   });
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -29,18 +31,24 @@ export default function EditProfilePage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (status === "loading") return;
+    if (!session?.user?.username) {
+      router.push("/login");
+      return;
+    }
+
     const fetchProfile = async () => {
       try {
-        const res = await fetch(`/api/users/${session?.user?.username}`);
+        const res = await fetch(`/api/users/${session.user.username}`);
         if (!res.ok) return;
         const data = await res.json();
         setForm({
-          fullName: data.fullName ?? '',
-          username: data.username ?? '',
-          bio: data.bio ?? '',
+          fullName: data.fullName ?? "",
+          username: data.username ?? "",
+          bio: data.bio ?? "",
         });
         if (data.avatarUrl) {
-          setAvatarPreview(`${process.env.NEXT_PUBLIC_API_URL}${data.avatarUrl}`);
+          setAvatarPreview(data.avatarUrl);
         }
       } catch (err) {
         console.error(err);
@@ -49,8 +57,8 @@ export default function EditProfilePage() {
       }
     };
 
-    if (session?.user?.username) void fetchProfile();
-  }, [session?.user?.username]);
+    void fetchProfile();
+  }, [session?.user?.username, status, router]);
 
   function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -65,19 +73,19 @@ export default function EditProfilePage() {
 
     try {
       const formData = new FormData();
-      formData.append('fullName', form.fullName);
-      formData.append('username', form.username);
-      formData.append('bio', form.bio);
-      if (avatarFile) formData.append('avatar', avatarFile);
+      formData.append("fullName", form.fullName);
+      formData.append("username", form.username);
+      formData.append("bio", form.bio);
+      if (avatarFile) formData.append("avatar", avatarFile);
 
-      const res = await fetch('/api/users/me', {
-        method: 'PATCH',
+      const res = await fetch(`/api/users/${session?.user?.username}`, {
+        method: "PATCH",
         body: formData,
       });
 
       if (!res.ok) {
         const data = await res.json();
-        setError((data.message as string) ?? 'Something went wrong.');
+        setError((data.message as string) ?? "Something went wrong.");
         return;
       }
 
@@ -85,23 +93,23 @@ export default function EditProfilePage() {
       router.push(`/profile/${form.username}`);
     } catch (err) {
       console.error(err);
-      setError('Something went wrong.');
+      setError("Something went wrong.");
     } finally {
       setSaving(false);
     }
   }
 
-  if (loading) {
+  // Session loading
+  if (status === "loading" || loading) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-black">
-        <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-neutral-700 border-t-white rounded-full animate-spin" />
       </main>
     );
   }
 
   return (
     <div className="max-w-100 mx-auto bg-black min-h-screen text-white">
-
       {/* Avatar */}
       <div className="flex flex-col items-center py-8 bg-[#121212] border-b border-[#262626]">
         <div
@@ -109,7 +117,12 @@ export default function EditProfilePage() {
           onClick={() => fileInputRef.current?.click()}
         >
           {avatarPreview ? (
-            <Image src={avatarPreview} alt="avatar" fill className="object-cover" />
+            <Image
+              src={avatarPreview}
+              alt="avatar"
+              fill
+              className="object-cover"
+            />
           ) : (
             <div className="w-full h-full bg-[#262626] flex items-center justify-center text-3xl font-light">
               {form.username[0]?.toUpperCase()}
@@ -136,31 +149,40 @@ export default function EditProfilePage() {
 
       {/* Form */}
       <div className="px-4 py-6 flex flex-col gap-5">
-
         <div className="flex flex-col gap-1">
-          <label className="text-[12px] text-[#8e8e8e] uppercase tracking-wide">Full name</label>
+          <label className="text-[12px] text-[#8e8e8e] uppercase tracking-wide">
+            Full name
+          </label>
           <input
             type="text"
             value={form.fullName}
-            onChange={(e) => setForm((p) => ({ ...p, fullName: e.target.value }))}
+            onChange={(e) =>
+              setForm((p) => ({ ...p, fullName: e.target.value }))
+            }
             placeholder="Full name"
             className="bg-[#121212] border border-[#333] rounded-lg px-3 py-2 text-white text-[14px] outline-none focus:border-[#555] placeholder:text-[#4e4e4e]"
           />
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-[12px] text-[#8e8e8e] uppercase tracking-wide">Username</label>
+          <label className="text-[12px] text-[#8e8e8e] uppercase tracking-wide">
+            Username
+          </label>
           <input
             type="text"
             value={form.username}
-            onChange={(e) => setForm((p) => ({ ...p, username: e.target.value }))}
+            onChange={(e) =>
+              setForm((p) => ({ ...p, username: e.target.value }))
+            }
             placeholder="Username"
             className="bg-[#121212] border border-[#333] rounded-lg px-3 py-2 text-white text-[14px] outline-none focus:border-[#555] placeholder:text-[#4e4e4e]"
           />
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="text-[12px] text-[#8e8e8e] uppercase tracking-wide">Bio</label>
+          <label className="text-[12px] text-[#8e8e8e] uppercase tracking-wide">
+            Bio
+          </label>
           <textarea
             value={form.bio}
             onChange={(e) => setForm((p) => ({ ...p, bio: e.target.value }))}
@@ -169,19 +191,19 @@ export default function EditProfilePage() {
             maxLength={150}
             className="bg-[#121212] border border-[#333] rounded-lg px-3 py-2 text-white text-[14px] outline-none focus:border-[#555] placeholder:text-[#4e4e4e] resize-none"
           />
-          <span className="text-[11px] text-[#4e4e4e] text-right">{form.bio.length}/150</span>
+          <span className="text-[11px] text-[#4e4e4e] text-right">
+            {form.bio.length}/150
+          </span>
         </div>
 
-        {error && (
-          <p className="text-[#ed4956] text-sm text-center">{error}</p>
-        )}
+        {error && <p className="text-[#ed4956] text-sm text-center">{error}</p>}
 
         <button
-          onClick={handleSave}
+          onClick={() => void handleSave()}
           disabled={saving}
           className="w-full bg-[#0095f6] text-white text-[15px] font-semibold py-2 rounded-lg disabled:opacity-50"
         >
-          {saving ? 'Saving...' : 'Save'}
+          {saving ? "Saving..." : "Save"}
         </button>
 
         <button
@@ -190,7 +212,6 @@ export default function EditProfilePage() {
         >
           Cancel
         </button>
-
       </div>
     </div>
   );

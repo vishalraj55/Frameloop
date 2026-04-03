@@ -10,8 +10,6 @@ export class UsersService {
       select: {
         id: true,
         username: true,
-        email: true,
-        password: true,
         avatarUrl: true,
       },
     });
@@ -25,6 +23,7 @@ export class UsersService {
         username: true,
         email: true,
         avatarUrl: true,
+        bio: true,
         createdAt: true,
         posts: {
           select: {
@@ -39,9 +38,32 @@ export class UsersService {
     });
 
     if (!user) throw new NotFoundException('User not found');
-
     return user;
   }
+
+  async updateProfile(
+    username: string,
+    data: { bio?: string; avatarUrl?: string; newUsername?: string },
+  ) {
+    const user = await this.prisma.user.findUnique({ where: { username } });
+    if (!user) throw new NotFoundException('User not found');
+
+    return this.prisma.user.update({
+      where: { username },
+      data: {
+        ...(data.bio !== undefined && { bio: data.bio }),
+        ...(data.avatarUrl && { avatarUrl: data.avatarUrl }),
+        ...(data.newUsername && { username: data.newUsername }),
+      },
+      select: {
+        id: true,
+        username: true,
+        avatarUrl: true,
+        bio: true,
+      },
+    });
+  }
+
   async deleteUser(id: string) {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) throw new NotFoundException('User not found');

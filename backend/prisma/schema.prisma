@@ -7,25 +7,28 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  username  String   @unique
-  email     String   @unique
+  id        String    @id @default(uuid())
+  username  String    @unique
+  email     String    @unique
   password  String
   avatarUrl String?
+  bio       String?
   posts     Post[]
   likes     Like[]
   stories   Story[]
-  createdAt DateTime @default(now())
+  comments  Comment[]
+  createdAt DateTime  @default(now())
 }
 
 model Post {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   imageUrl  String
   caption   String?
   authorId  String
-  author    User     @relation(fields: [authorId], references: [id])
+  author    User      @relation(fields: [authorId], references: [id])
   likes     Like[]
-  createdAt DateTime @default(now())
+  comments  Comment[]
+  createdAt DateTime  @default(now())
 }
 
 model Like {
@@ -36,6 +39,16 @@ model Like {
   post   Post   @relation(fields: [postId], references: [id])
 
   @@unique([userId, postId])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  text      String
+  postId    String
+  authorId  String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id])
+  createdAt DateTime @default(now())
 }
 
 model Story {

@@ -11,14 +11,21 @@ const authorSelect = {
 export class PostsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getFeed() {
-    return this.prisma.post.findMany({
+  async getFeed(cursor?: string, limit = 10) {
+    const posts = await this.prisma.post.findMany({
+      take: limit,
+      ...(cursor && {
+        skip: 1,
+        cursor: { id: cursor },
+      }),
       include: {
         author: { select: authorSelect },
         likes: true,
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    return posts;
   }
 
   async findOne(id: string) {
@@ -40,9 +47,17 @@ export class PostsService {
   }
 
   async likePost(postId: string, userId: string) {
-    return this.prisma.like.create({
-      data: { postId, userId },
+    const existing = await this.prisma.like.findFirst({
+      where: { postId, userId },
     });
+
+    if (existing) {
+      await this.prisma.like.delete({ where: { id: existing.id } });
+      return { liked: false };
+    }
+
+    await this.prisma.like.create({ data: { postId, userId } });
+    return { liked: true };
   }
 
   async delete(id: string) {

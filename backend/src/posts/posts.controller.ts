@@ -2,8 +2,10 @@ import {
   Controller,
   Get,
   Post,
+  Delete,
   Body,
   Param,
+  Query,
   UploadedFile,
   UseInterceptors,
   BadRequestException,
@@ -20,8 +22,13 @@ export class PostsController {
   constructor(private postsService: PostsService) {}
 
   @Get()
-  getFeed() {
-    return this.postsService.getFeed();
+  getFeed(@Query('cursor') cursor?: string, @Query('limit') limit?: string) {
+    return this.postsService.getFeed(cursor, limit ? parseInt(limit, 10) : 10);
+  }
+
+  @Get(':id')
+  getOne(@Param('id') id: string) {
+    return this.postsService.findOne(id);
   }
 
   @Post()
@@ -54,5 +61,10 @@ export class PostsController {
   @Post(':id/like')
   like(@Param('id') id: string, @Body() body: LikeDto) {
     return this.postsService.likePost(id, body.userId);
+  }
+
+  @Delete(':id')
+  delete(@Param('id') id: string) {
+    return this.postsService.delete(id);
   }
 }

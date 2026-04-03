@@ -60,5 +60,8 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 # User uploads
 /uploads
 
+# Comments cos it contains error 
+src/comments
+
 # Prisma
 prisma/migrations/**/migration_lock.toml
