@@ -1,3 +1,3 @@
 export class LikeDto {
-  userId: string;
+  userId!: string;
 }

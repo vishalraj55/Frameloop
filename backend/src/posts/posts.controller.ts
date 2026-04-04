@@ -41,7 +41,7 @@ export class PostsController {
 
     const imageUrl = await new Promise<string>((resolve, reject) => {
       const upload = cloudinary.uploader.upload_stream(
-        { folder: 'posts' },
+        { folder: `users/${body.authorId}/posts` },
         (error, result) => {
           if (error || !result)
             return reject(new Error(error?.message ?? 'Upload failed'));

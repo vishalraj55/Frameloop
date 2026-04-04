@@ -1,5 +1,5 @@
 export class CreatePostDto {
-  imageUrl: string;
+  imageUrl!: string;
   caption?: string;
-  authorId: string;
+  authorId!: string;
 }

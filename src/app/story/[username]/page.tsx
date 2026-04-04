@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import Image from 'next/image';
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import Image from "next/image";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { useRouter, useParams } from "next/navigation";
 
 interface StoryType {
   id: string;
@@ -15,6 +15,10 @@ interface StoryType {
 
 const STORY_DURATION = 5000;
 const TICK = 50;
+
+function isVideo(url: string) {
+  return /\.(mp4|webm|mov|ogg)$/i.test(url) || url.includes("/video/upload/");
+}
 
 export default function StoryPage() {
   const router = useRouter();
@@ -31,15 +35,19 @@ export default function StoryPage() {
   const holdRef = useRef(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const holdTimeout = useRef<NodeJS.Timeout | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const progressRef = useRef(0);
 
   useEffect(() => {
     const fetchStories = async () => {
       try {
-        const res = await fetch(`http://localhost:3000/stories/${username}`);
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/stories/${username}`,
+        );
         const data = (await res.json()) as StoryType[];
         setStories(data);
       } catch (err) {
-        console.error('Failed to fetch stories:', err);
+        console.error("Failed to fetch stories:", err);
       }
     };
     void fetchStories();
@@ -56,14 +64,14 @@ export default function StoryPage() {
         setTransitioning(false);
       }, 180);
     },
-    [transitioning]
+    [transitioning],
   );
 
   const goNext = useCallback(() => {
     if (currentIndex < stories.length - 1) {
       goTo(currentIndex + 1);
     } else {
-      router.push('/feed');
+      setTimeout(() => router.push("/feed"), 0);
     }
   }, [currentIndex, stories.length, router, goTo]);
 
@@ -73,34 +81,75 @@ export default function StoryPage() {
     }
   }, [currentIndex, goTo]);
 
-  // Auto-advance timer
   useEffect(() => {
+    const video = videoRef.current;
+    const story = stories[currentIndex];
+    if (!video || !story || !isVideo(story.imageUrl)) return;
+
+    const onTimeUpdate = () => {
+      if (video.duration) {
+        setProgress((video.currentTime / video.duration) * 100);
+      }
+    };
+
+    const onEnded = () => goNext();
+
+    video.addEventListener("timeupdate", onTimeUpdate);
+    video.addEventListener("ended", onEnded);
+    return () => {
+      video.removeEventListener("timeupdate", onTimeUpdate);
+      video.removeEventListener("ended", onEnded);
+    };
+  }, [currentIndex, stories, goNext]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    const story = stories[currentIndex];
+    if (!video || !story || !isVideo(story.imageUrl)) return;
+
+    if (paused) {
+      video.pause();
+    } else {
+      void video.play().catch(() => null);
+    }
+  }, [paused, currentIndex, stories]);
+
+  useEffect(() => {
+    const story = stories[currentIndex];
+    if (!story || isVideo(story.imageUrl)) return;
     if (stories.length === 0 || !loaded) return;
 
+    progressRef.current = 0;
     const increment = 100 / (STORY_DURATION / TICK);
 
     timerRef.current = setInterval(() => {
       if (holdRef.current || paused) return;
-      setProgress((prev) => {
-        if (prev >= 100) {
-          goNext();
-          return 0;
-        }
-        return prev + increment;
-      });
+
+      progressRef.current += increment;
+
+      if (progressRef.current >= 100) {
+        clearInterval(timerRef.current!);
+        progressRef.current = 0;
+        goNext();
+        return;
+      }
+
+      setProgress(progressRef.current);
     }, TICK);
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      setProgress(0);
     };
-  }, [paused, stories, goNext, currentIndex, loaded]);
+  }, [paused, stories, currentIndex, loaded, goNext]);
 
-  // Mark seen
   useEffect(() => {
     if (stories.length === 0) return;
-    const seen = JSON.parse(localStorage.getItem('seenStories') ?? '[]') as string[];
+    const seen = JSON.parse(
+      localStorage.getItem("seenStories") ?? "[]",
+    ) as string[];
     if (!seen.includes(username)) {
-      localStorage.setItem('seenStories', JSON.stringify([...seen, username]));
+      localStorage.setItem("seenStories", JSON.stringify([...seen, username]));
     }
   }, [stories, username]);
 
@@ -122,51 +171,71 @@ export default function StoryPage() {
   if (!story) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-black">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-        </div>
+        <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" />
       </div>
     );
   }
 
+  const storyIsVideo = isVideo(story.imageUrl);
+
   return (
     <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
-      {/* Blurred background */}
       <div className="absolute inset-0 overflow-hidden">
-        <Image
-          src={`http://localhost:3000${story.imageUrl}`}
-          alt=""
-          fill
-          className="object-cover scale-110 blur-2xl opacity-30"
-          priority
-        />
+        {storyIsVideo ? (
+          <video
+            src={story.imageUrl}
+            className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-30"
+            muted
+            playsInline
+            autoPlay
+            loop
+            onCanPlay={(e) => {
+              void (e.target as HTMLVideoElement).play().catch(() => null);
+            }}
+          />
+        ) : (
+          <Image
+            src={story.imageUrl}
+            alt=""
+            fill
+            className="object-cover scale-110 blur-2xl opacity-30"
+            priority
+          />
+        )}
       </div>
 
-      {/* Story card — constrained width like Instagram */}
-      <div
-        className="relative w-full max-w-sm h-full md:h-[90vh] md:rounded-2xl overflow-hidden shadow-2xl"
-        style={{ aspectRatio: '9/16' }}
-      >
-        {/* Story image */}
+      <div className="relative w-full max-w-sm h-full md:h-[90vh] md:rounded-2xl overflow-hidden shadow-2xl">
         <div
           className="absolute inset-0 transition-opacity duration-200"
           style={{ opacity: transitioning ? 0 : 1 }}
         >
-          <Image
-            src={`http://localhost:3000${story.imageUrl}`}
-            alt=""
-            fill
-            priority
-            className="object-cover"
-            onLoad={() => setLoaded(true)}
-          />
+          {storyIsVideo ? (
+            <video
+              ref={videoRef}
+              src={story.imageUrl}
+              className="absolute inset-0 w-full h-full object-cover"
+              playsInline
+              autoPlay
+              onCanPlay={(e) => {
+                void (e.target as HTMLVideoElement).play().catch(() => null);
+                setLoaded(true);
+              }}
+            />
+          ) : (
+            <Image
+              src={story.imageUrl}
+              alt=""
+              fill
+              priority
+              className="object-cover"
+              onLoad={() => setLoaded(true)}
+            />
+          )}
         </div>
 
-        {/* Gradient overlays */}
         <div className="absolute inset-x-0 top-0 h-32 bg-linear-to-b from-black/60 via-black/20 to-transparent z-10 pointer-events-none" />
         <div className="absolute inset-x-0 bottom-0 h-24 bg-linear-to-t from-black/50 to-transparent z-10 pointer-events-none" />
 
-        {/* Paused indicator */}
         {paused && (
           <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none">
             <div className="bg-black/30 rounded-full p-4 backdrop-blur-sm">
@@ -178,42 +247,31 @@ export default function StoryPage() {
           </div>
         )}
 
-        {/* Top UI */}
         <div className="absolute top-0 left-0 right-0 z-20 px-3 pt-3">
-          {/* Progress bars */}
           <div className="flex gap-1 mb-3">
             {stories.map((s, i) => (
-              <div
-                key={s.id}
-                className="flex-1 h-0.5 bg-white/30 rounded-full overflow-hidden"
-              >
+              <div key={s.id} className="flex-1 h-0.5 bg-white/30 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-white rounded-full"
                   style={{
                     width:
                       i < currentIndex
-                        ? '100%'
+                        ? "100%"
                         : i === currentIndex
-                        ? `${progress}%`
-                        : '0%',
-                    transition: i === currentIndex ? `width ${TICK}ms linear` : 'none',
+                          ? `${progress}%`
+                          : "0%",
+                    transition: i === currentIndex ? `width ${TICK}ms linear` : "none",
                   }}
                 />
               </div>
             ))}
           </div>
 
-          {/* Author row */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <div className="relative h-8 w-8 rounded-full overflow-hidden ring-2 ring-white/80">
                 {story.author.avatarUrl ? (
-                  <Image
-                    src={`http://localhost:3000${story.author.avatarUrl}`}
-                    alt=""
-                    fill
-                    className="object-cover"
-                  />
+                  <Image src={story.author.avatarUrl} alt="" fill className="object-cover" />
                 ) : (
                   <div className="w-full h-full bg-linear-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold">
                     {story.author.username[0].toUpperCase()}
@@ -231,7 +289,7 @@ export default function StoryPage() {
             </div>
 
             <button
-              onClick={() => router.push('/feed')}
+              onClick={() => router.push("/feed")}
               className="text-white/80 hover:text-white transition-colors p-1"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
@@ -241,9 +299,7 @@ export default function StoryPage() {
           </div>
         </div>
 
-        {/* Tap zones */}
         <div className="absolute inset-0 z-10 flex">
-          {/* Prev */}
           <div
             className="w-1/3 h-full cursor-pointer"
             onClick={goPrev}
@@ -253,7 +309,6 @@ export default function StoryPage() {
             onTouchStart={handleHoldStart}
             onTouchEnd={handleHoldEnd}
           />
-          {/* Hold (middle) */}
           <div
             className="w-1/3 h-full cursor-pointer"
             onMouseDown={handleHoldStart}
@@ -262,7 +317,6 @@ export default function StoryPage() {
             onTouchStart={handleHoldStart}
             onTouchEnd={handleHoldEnd}
           />
-          {/* Next */}
           <div
             className="w-1/3 h-full cursor-pointer"
             onClick={goNext}

@@ -19,25 +19,20 @@ interface PostType {
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const PAGE_SIZE = 10;
 
-// ─── Skeleton ───────────────────────────────────────────────────────────────
-
+// just a single post loading placeholder
 function PostSkeleton() {
   return (
     <div className="border-b border-neutral-900 pb-4 mb-2 animate-pulse">
-      {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3">
         <div className="w-8 h-8 rounded-full bg-neutral-800" />
         <div className="h-3 w-28 rounded bg-neutral-800" />
       </div>
-      {/* Image */}
       <div className="w-full aspect-square bg-neutral-800" />
-      {/* Actions */}
       <div className="px-4 pt-3 flex gap-4">
         <div className="h-6 w-6 rounded bg-neutral-800" />
         <div className="h-6 w-6 rounded bg-neutral-800" />
         <div className="h-6 w-6 rounded bg-neutral-800" />
       </div>
-      {/* Likes + caption */}
       <div className="px-4 pt-2 flex flex-col gap-2">
         <div className="h-3 w-16 rounded bg-neutral-800" />
         <div className="h-3 w-3/4 rounded bg-neutral-800" />
@@ -47,16 +42,13 @@ function PostSkeleton() {
   );
 }
 
+// shown on first load before we have any data
 function FeedSkeleton() {
   return (
     <>
-      {/* Stories skeleton */}
       <div className="flex gap-4 px-4 py-3 border-b border-neutral-900 overflow-hidden">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div
-            key={i}
-            className="flex flex-col items-center gap-1.5 animate-pulse"
-          >
+          <div key={i} className="flex flex-col items-center gap-1.5 animate-pulse">
             <div className="w-14 h-14 rounded-full bg-neutral-800" />
             <div className="h-2 w-10 rounded bg-neutral-800" />
           </div>
@@ -69,8 +61,7 @@ function FeedSkeleton() {
   );
 }
 
-// ─── Pull-to-refresh indicator ───────────────────────────────────────────────
-
+// the little circular progress ring that appears when you pull down
 function RefreshIndicator({ progress }: { progress: number }) {
   const size = 24;
   const radius = 9;
@@ -85,20 +76,8 @@ function RefreshIndicator({ progress }: { progress: number }) {
         opacity: progress / 100,
       }}
     >
-      <svg
-        width={size}
-        height={size}
-        viewBox={`0 0 ${size} ${size}`}
-        className="-rotate-90"
-      >
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="#333"
-          strokeWidth={2}
-        />
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#333" strokeWidth={2} />
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -114,11 +93,9 @@ function RefreshIndicator({ progress }: { progress: number }) {
   );
 }
 
-// ─── Main Page ───────────────────────────────────────────────────────────────
-
 export default function FeedPage() {
   const [posts, setPosts] = useState<PostType[]>([]);
-  const [page, setPage] = useState(1);
+  const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [hasMore, setHasMore] = useState(true);
   const [initialLoading, setInitialLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -130,32 +107,45 @@ export default function FeedPage() {
   const touchStartY = useRef(0);
   const pulling = useRef(false);
 
-  // ── Fetch ──────────────────────────────────────────────────────────────────
-
-  const fetchPosts = useCallback(async (pageNum: number, replace = false) => {
+  // cursor-based fetch — pass a cursor to get the next batch, or nothing for the first page.
+  // "replace" wipes the existing list (used on refresh)
+  const fetchPosts = useCallback(async (cursorParam?: string, replace = false) => {
     try {
-      const res = await fetch(
-        `${API_URL}/posts?page=${pageNum}&limit=${PAGE_SIZE}`,
-      );
+      const params = new URLSearchParams();
+      params.set("limit", String(PAGE_SIZE));
+      if (cursorParam) params.set("cursor", cursorParam);
+
+      const res = await fetch(`${API_URL}/posts?${params.toString()}`);
       const data = (await res.json()) as PostType[];
-      setPosts((prev) => (replace ? data : [...prev, ...data]));
+
+      setPosts((prev) => {
+        if (replace) return data;
+        // safety net: drop any posts we already have to avoid duplicate keys
+        const seen = new Set(prev.map((p) => p.id));
+        return [...prev, ...data.filter((p) => !seen.has(p.id))];
+      });
+
       setHasMore(data.length === PAGE_SIZE);
+
+      // the last post's id becomes the cursor for the next fetch
+      if (data.length > 0) {
+        setCursor(data[data.length - 1]!.id);
+      }
     } catch (err) {
       console.error("Failed to fetch posts:", err);
     }
   }, []);
 
-  // Initial load
+  // kick off the first load
   useEffect(() => {
     const load = async () => {
-      await fetchPosts(1, true);
+      await fetchPosts(undefined, true);
       setInitialLoading(false);
     };
     void load();
   }, [fetchPosts]);
 
-  // ── Infinite scroll ────
-
+  // watch the invisible sentinel div at the bottom — when it enters the viewport, load more
   useEffect(() => {
     if (!sentinelRef.current) return;
 
@@ -168,20 +158,17 @@ export default function FeedPage() {
           !initialLoading
         ) {
           setLoadingMore(true);
-          const next = page + 1;
-          setPage(next);
-          void fetchPosts(next).finally(() => setLoadingMore(false));
+          void fetchPosts(cursor).finally(() => setLoadingMore(false));
         }
       },
-      { rootMargin: "200px" },
+      { rootMargin: "200px" }, // start loading a bit before they actually hit the bottom
     );
 
     observer.observe(sentinelRef.current);
     return () => observer.disconnect();
-  }, [fetchPosts, hasMore, loadingMore, initialLoading, page]);
+  }, [fetchPosts, hasMore, loadingMore, initialLoading, cursor]);
 
-  // ── Pull to refresh ────────────────────────────────────────────────────────
-
+  // only start tracking a pull if the user is already at the top of the feed
   const handleTouchStart = (e: React.TouchEvent) => {
     const el = scrollRef.current;
     if (el && el.scrollTop === 0) {
@@ -190,6 +177,7 @@ export default function FeedPage() {
     }
   };
 
+  // translate how far they've pulled into a 0–100 progress value
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!pulling.current) return;
     const delta = e.touches[0]!.clientY - touchStartY.current;
@@ -198,6 +186,7 @@ export default function FeedPage() {
     }
   };
 
+  // if they pulled far enough, do a full refresh — otherwise snap back
   const handleTouchEnd = async () => {
     if (!pulling.current) return;
     pulling.current = false;
@@ -205,16 +194,14 @@ export default function FeedPage() {
     if (pullProgress >= 100) {
       setRefreshing(true);
       setPullProgress(0);
-      setPage(1);
+      setCursor(undefined); // reset cursor so we start from the top again
       setHasMore(true);
-      await fetchPosts(1, true);
+      await fetchPosts(undefined, true);
       setRefreshing(false);
     } else {
       setPullProgress(0);
     }
   };
-
-  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div
@@ -224,10 +211,10 @@ export default function FeedPage() {
       onTouchMove={handleTouchMove}
       onTouchEnd={() => void handleTouchEnd()}
     >
-      {/* Pull-to-refresh indicator */}
+      {/* pull ring — hides once a real refresh is in progress */}
       {!refreshing && <RefreshIndicator progress={pullProgress} />}
 
-      {/* Refreshing spinner */}
+      {/* spinner while refreshing */}
       {refreshing && (
         <div className="flex justify-center py-3">
           <div className="w-5 h-5 border-2 border-neutral-700 border-t-white rounded-full animate-spin" />
@@ -241,6 +228,7 @@ export default function FeedPage() {
           <StoriesBar />
 
           {posts.length === 0 ? (
+            // empty state — nobody has posted yet
             <div className="flex flex-col items-center justify-center py-24 text-center">
               <div className="w-16 h-16 rounded-full border-2 border-neutral-700 flex items-center justify-center mb-4">
                 <svg
@@ -263,9 +251,7 @@ export default function FeedPage() {
                 </svg>
               </div>
               <p className="text-white font-semibold text-sm">No Posts Yet</p>
-              <p className="text-neutral-500 text-xs mt-1">
-                Be the first to share a photo!
-              </p>
+              <p className="text-neutral-500 text-xs mt-1">Be the first to share a photo!</p>
             </div>
           ) : (
             <>
@@ -279,11 +265,11 @@ export default function FeedPage() {
                   caption={post.caption ?? ""}
                   likes={post.likes.length}
                   createdAt={post.createdAt ?? ""}
-                  priority={index === 0}
+                  priority={index === 0} // eagerly load the first image only
                 />
               ))}
 
-              {/* Infinite scroll sentinel */}
+              {/* this div is invisible — the IntersectionObserver watches it to trigger the next page load */}
               <div ref={sentinelRef} className="py-6 flex justify-center">
                 {loadingMore && (
                   <div className="w-5 h-5 border-2 border-neutral-700 border-t-white rounded-full animate-spin" />
