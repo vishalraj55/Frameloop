@@ -91,7 +91,6 @@ export default function StoryPage() {
         setProgress((video.currentTime / video.duration) * 100);
       }
     };
-
     const onEnded = () => goNext();
 
     video.addEventListener("timeupdate", onTimeUpdate);
@@ -179,12 +178,14 @@ export default function StoryPage() {
   const storyIsVideo = isVideo(story.imageUrl);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black flex items-center justify-center">
+    <div className="fixed inset-0 z-50 bg-black">
+
+      {/* Blurred background — fills entire screen */}
       <div className="absolute inset-0 overflow-hidden">
         {storyIsVideo ? (
           <video
             src={story.imageUrl}
-            className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-30"
+            className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-40"
             muted
             playsInline
             autoPlay
@@ -198,134 +199,167 @@ export default function StoryPage() {
             src={story.imageUrl}
             alt=""
             fill
-            className="object-cover scale-110 blur-2xl opacity-30"
+            className="object-cover scale-110 blur-2xl opacity-40"
             priority
           />
         )}
       </div>
 
-      <div className="relative w-full max-w-sm h-full md:h-[90vh] md:rounded-2xl overflow-hidden shadow-2xl">
+      {/* Story content — true full screen, centered on desktop */}
+      <div className="absolute inset-0 flex items-center justify-center">
         <div
-          className="absolute inset-0 transition-opacity duration-200"
-          style={{ opacity: transitioning ? 0 : 1 }}
+          className="
+            relative w-full h-full
+            md:w-97.5 md:h-full md:max-h-screen
+          "
         >
-          {storyIsVideo ? (
-            <video
-              ref={videoRef}
-              src={story.imageUrl}
-              className="absolute inset-0 w-full h-full object-cover"
-              playsInline
-              autoPlay
-              onCanPlay={(e) => {
-                void (e.target as HTMLVideoElement).play().catch(() => null);
-                setLoaded(true);
-              }}
-            />
-          ) : (
-            <Image
-              src={story.imageUrl}
-              alt=""
-              fill
-              priority
-              className="object-cover"
-              onLoad={() => setLoaded(true)}
-            />
+          {/* Media — object-contain so nothing is cropped */}
+          <div
+            className="absolute inset-0 transition-opacity duration-200"
+            style={{ opacity: transitioning ? 0 : 1 }}
+          >
+            {storyIsVideo ? (
+              <video
+                ref={videoRef}
+                src={story.imageUrl}
+                className="w-full h-full object-contain"
+                playsInline
+                autoPlay
+                onCanPlay={(e) => {
+                  void (e.target as HTMLVideoElement).play().catch(() => null);
+                  setLoaded(true);
+                }}
+              />
+            ) : (
+              <Image
+                src={story.imageUrl}
+                alt=""
+                fill
+                priority
+                className="object-contain"
+                onLoad={() => setLoaded(true)}
+              />
+            )}
+          </div>
+
+          {/* Top gradient */}
+          <div className="absolute inset-x-0 top-0 h-36 bg-linear-to-b from-black/70 via-black/20 to-transparent z-10 pointer-events-none" />
+          {/* Bottom gradient */}
+          <div className="absolute inset-x-0 bottom-0 h-32 bg-linear-to-t from-black/60 to-transparent z-10 pointer-events-none" />
+
+          {/* Pause indicator */}
+          {paused && (
+            <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none">
+              <div className="bg-black/30 rounded-full p-4 backdrop-blur-sm">
+                <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+                  <rect x="6" y="4" width="4" height="16" rx="1" />
+                  <rect x="14" y="4" width="4" height="16" rx="1" />
+                </svg>
+              </div>
+            </div>
           )}
-        </div>
 
-        <div className="absolute inset-x-0 top-0 h-32 bg-linear-to-b from-black/60 via-black/20 to-transparent z-10 pointer-events-none" />
-        <div className="absolute inset-x-0 bottom-0 h-24 bg-linear-to-t from-black/50 to-transparent z-10 pointer-events-none" />
-
-        {paused && (
-          <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none">
-            <div className="bg-black/30 rounded-full p-4 backdrop-blur-sm">
-              <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <rect x="6" y="4" width="4" height="16" rx="1" />
-                <rect x="14" y="4" width="4" height="16" rx="1" />
-              </svg>
-            </div>
-          </div>
-        )}
-
-        <div className="absolute top-0 left-0 right-0 z-20 px-3 pt-3">
-          <div className="flex gap-1 mb-3">
-            {stories.map((s, i) => (
-              <div key={s.id} className="flex-1 h-0.5 bg-white/30 rounded-full overflow-hidden">
+          {/* Progress bars + header */}
+          <div className="absolute top-0 left-0 right-0 z-20 px-3 pt-12 md:pt-4">
+            <div className="flex gap-1 mb-3">
+              {stories.map((s, i) => (
                 <div
-                  className="h-full bg-white rounded-full"
-                  style={{
-                    width:
-                      i < currentIndex
-                        ? "100%"
-                        : i === currentIndex
-                          ? `${progress}%`
-                          : "0%",
-                    transition: i === currentIndex ? `width ${TICK}ms linear` : "none",
-                  }}
-                />
-              </div>
-            ))}
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="relative h-8 w-8 rounded-full overflow-hidden ring-2 ring-white/80">
-                {story.author.avatarUrl ? (
-                  <Image src={story.author.avatarUrl} alt="" fill className="object-cover" />
-                ) : (
-                  <div className="w-full h-full bg-linear-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold">
-                    {story.author.username[0].toUpperCase()}
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-white text-sm font-semibold drop-shadow">
-                  {story.author.username}
-                </span>
-                <span className="text-white/60 text-xs">
-                  {currentIndex + 1} / {stories.length}
-                </span>
-              </div>
+                  key={s.id}
+                  className="flex-1 h-0.5 bg-white/30 rounded-full overflow-hidden"
+                >
+                  <div
+                    className="h-full bg-white rounded-full"
+                    style={{
+                      width:
+                        i < currentIndex
+                          ? "100%"
+                          : i === currentIndex
+                            ? `${progress}%`
+                            : "0%",
+                      transition:
+                        i === currentIndex ? `width ${TICK}ms linear` : "none",
+                    }}
+                  />
+                </div>
+              ))}
             </div>
 
-            <button
-              onClick={() => router.push("/feed")}
-              className="text-white/80 hover:text-white transition-colors p-1"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="relative h-9 w-9 rounded-full overflow-hidden ring-2 ring-white/80 shrink-0">
+                  {story.author.avatarUrl ? (
+                    <Image
+                      src={story.author.avatarUrl}
+                      alt=""
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-linear-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold">
+                      {story.author.username[0].toUpperCase()}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-white text-sm font-semibold drop-shadow-md">
+                    {story.author.username}
+                  </span>
+                  <span className="text-white/60 text-xs">
+                    {currentIndex + 1} / {stories.length}
+                  </span>
+                </div>
+              </div>
 
-        <div className="absolute inset-0 z-10 flex">
-          <div
-            className="w-1/3 h-full cursor-pointer"
-            onClick={goPrev}
-            onMouseDown={handleHoldStart}
-            onMouseUp={handleHoldEnd}
-            onMouseLeave={handleHoldEnd}
-            onTouchStart={handleHoldStart}
-            onTouchEnd={handleHoldEnd}
-          />
-          <div
-            className="w-1/3 h-full cursor-pointer"
-            onMouseDown={handleHoldStart}
-            onMouseUp={handleHoldEnd}
-            onMouseLeave={handleHoldEnd}
-            onTouchStart={handleHoldStart}
-            onTouchEnd={handleHoldEnd}
-          />
-          <div
-            className="w-1/3 h-full cursor-pointer"
-            onClick={goNext}
-            onMouseDown={handleHoldStart}
-            onMouseUp={handleHoldEnd}
-            onMouseLeave={handleHoldEnd}
-            onTouchStart={handleHoldStart}
-            onTouchEnd={handleHoldEnd}
-          />
+              <button
+                onClick={() => router.push("/feed")}
+                className="text-white/80 hover:text-white transition-colors p-1"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          {/* Tap zones */}
+          <div className="absolute inset-0 z-10 flex">
+            <div
+              className="w-1/3 h-full cursor-pointer"
+              onClick={goPrev}
+              onMouseDown={handleHoldStart}
+              onMouseUp={handleHoldEnd}
+              onMouseLeave={handleHoldEnd}
+              onTouchStart={handleHoldStart}
+              onTouchEnd={handleHoldEnd}
+            />
+            <div
+              className="w-1/3 h-full cursor-pointer"
+              onMouseDown={handleHoldStart}
+              onMouseUp={handleHoldEnd}
+              onMouseLeave={handleHoldEnd}
+              onTouchStart={handleHoldStart}
+              onTouchEnd={handleHoldEnd}
+            />
+            <div
+              className="w-1/3 h-full cursor-pointer"
+              onClick={goNext}
+              onMouseDown={handleHoldStart}
+              onMouseUp={handleHoldEnd}
+              onMouseLeave={handleHoldEnd}
+              onTouchStart={handleHoldStart}
+              onTouchEnd={handleHoldEnd}
+            />
+          </div>
         </div>
       </div>
     </div>
