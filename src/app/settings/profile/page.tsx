@@ -545,10 +545,6 @@ export default function EditProfilePage() {
         </button>
       </div>
 
-      {/* ══════════════════════════════════════════
-          BOTTOM SHEETS
-      ══════════════════════════════════════════ */}
-
       {/* Pronouns sheet */}
       {activeSheet === "pronouns" && (
         <Sheet onClose={() => setActiveSheet(null)}>
