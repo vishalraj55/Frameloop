@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { PlusSquare, LogOut } from "lucide-react";
+// PlusSquare
+import {LogOut } from "lucide-react";
 
 export default function TopBar() {
   const { data: session } = useSession();
@@ -13,7 +14,7 @@ export default function TopBar() {
       <div className="max-w-lg mx-auto h-12 flex items-center justify-between px-4">
 
         {/* LEFT (UPLOAD) */}
-        <div className="flex items-center">
+        {/* <div className="flex items-center">
           {session && (
             <Link
               href="/upload"
@@ -22,7 +23,7 @@ export default function TopBar() {
               <PlusSquare size={24} strokeWidth={1.8} className="text-white" />
             </Link>
           )}
-        </div>
+        </div> */}
 
         {/* CENTER LOGO */}
         <h1

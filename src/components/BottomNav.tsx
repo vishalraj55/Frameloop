@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-// PlusSquare
-import { Home, Search, Compass, User } from "lucide-react";
+import { Home, Search, Compass, User, PlusSquare } from "lucide-react";
 
 export default function NavBar() {
   const pathname = usePathname();
@@ -27,9 +26,9 @@ export default function NavBar() {
           <Search size={24} stroke="white" strokeWidth={1.5} />
         </Link>
 
-        {/* <Link href="/upload" className={active("/upload")}>
+        <Link href="/upload" className={active("/upload")}>
           <PlusSquare size={24} stroke="white" strokeWidth={1.5} />
-        </Link> */}
+        </Link>
 
         <Link href="/explore" className={active("/explore")}>
           <Compass size={24} stroke="white" strokeWidth={1.5} />
