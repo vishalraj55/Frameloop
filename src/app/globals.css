@@ -54,3 +54,10 @@ button {
   transition: none !important;
   animation: none !important;
 }
+* {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+}

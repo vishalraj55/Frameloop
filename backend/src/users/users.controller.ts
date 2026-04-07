@@ -1,13 +1,13 @@
 import {
   Controller,
   Get,
+  Post,
   Patch,
   Delete,
   Param,
   Body,
   UploadedFile,
   UseInterceptors,
-  // BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -57,6 +57,24 @@ export class UsersController {
       avatarUrl,
       newUsername: body.username,
     });
+  }
+
+  /* ── Follow ── */
+  @Post(':username/follow')
+  follow(
+    @Param('username') username: string,
+    @Body() body: { followerId: string },
+  ) {
+    return this.usersService.followUser(username, body.followerId);
+  }
+
+  /* ── Unfollow ── */
+  @Delete(':username/follow')
+  unfollow(
+    @Param('username') username: string,
+    @Body() body: { followerId: string },
+  ) {
+    return this.usersService.unfollowUser(username, body.followerId);
   }
 
   @Delete(':id')

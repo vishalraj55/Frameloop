@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -34,6 +38,12 @@ export class UsersService {
           },
           orderBy: { createdAt: 'desc' },
         },
+        _count: {
+          select: {
+            followers: true,
+            following: true,
+          },
+        },
       },
     });
 
@@ -68,5 +78,56 @@ export class UsersService {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) throw new NotFoundException('User not found');
     return this.prisma.user.delete({ where: { id } });
+  }
+
+  /* ── Follow ── */
+  async followUser(username: string, followerId: string) {
+    const target = await this.prisma.user.findUnique({ where: { username } });
+    if (!target) throw new NotFoundException('User not found');
+
+    const existing = await this.prisma.follow.findUnique({
+      where: {
+        followerId_followingId: {
+          followerId,
+          followingId: target.id,
+        },
+      },
+    });
+
+    if (existing) throw new ConflictException('Already following');
+
+    await this.prisma.follow.create({
+      data: { followerId, followingId: target.id },
+    });
+
+    return { following: true };
+  }
+
+  // /* ── Unfollow ── */
+  async unfollowUser(username: string, followerId: string) {
+    const target = await this.prisma.user.findUnique({ where: { username } });
+    if (!target) throw new NotFoundException('User not found');
+
+    const existing = await this.prisma.follow.findUnique({
+      where: {
+        followerId_followingId: {
+          followerId,
+          followingId: target.id,
+        },
+      },
+    });
+
+    if (!existing) throw new NotFoundException('Not following');
+
+    await this.prisma.follow.delete({
+      where: {
+        followerId_followingId: {
+          followerId,
+          followingId: target.id,
+        },
+      },
+    });
+
+    return { following: false };
   }
 }

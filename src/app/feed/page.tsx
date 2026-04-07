@@ -9,8 +9,10 @@ interface PostType {
   imageUrl: string;
   caption?: string;
   author: {
+    id: string;           // ← needed for follow API
     username: string;
     avatarUrl?: string;
+    isFollowing?: boolean; // ← returned by your API
   };
   likes: { id: string }[];
   createdAt?: string;
@@ -19,7 +21,6 @@ interface PostType {
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const PAGE_SIZE = 10;
 
-// just a single post loading placeholder
 function PostSkeleton() {
   return (
     <div className="border-b border-neutral-900 pb-4 mb-2 animate-pulse">
@@ -42,7 +43,6 @@ function PostSkeleton() {
   );
 }
 
-// shown on first load before we have any data
 function FeedSkeleton() {
   return (
     <>
@@ -61,7 +61,6 @@ function FeedSkeleton() {
   );
 }
 
-// the little circular progress ring that appears when you pull down
 function RefreshIndicator({ progress }: { progress: number }) {
   const size = 24;
   const radius = 9;
@@ -107,8 +106,6 @@ export default function FeedPage() {
   const touchStartY = useRef(0);
   const pulling = useRef(false);
 
-  // cursor-based fetch — pass a cursor to get the next batch, or nothing for the first page.
-  // "replace" wipes the existing list (used on refresh)
   const fetchPosts = useCallback(async (cursorParam?: string, replace = false) => {
     try {
       const params = new URLSearchParams();
@@ -120,14 +117,12 @@ export default function FeedPage() {
 
       setPosts((prev) => {
         if (replace) return data;
-        // safety net: drop any posts we already have to avoid duplicate keys
         const seen = new Set(prev.map((p) => p.id));
         return [...prev, ...data.filter((p) => !seen.has(p.id))];
       });
 
       setHasMore(data.length === PAGE_SIZE);
 
-      // the last post's id becomes the cursor for the next fetch
       if (data.length > 0) {
         setCursor(data[data.length - 1]!.id);
       }
@@ -136,7 +131,6 @@ export default function FeedPage() {
     }
   }, []);
 
-  // kick off the first load
   useEffect(() => {
     const load = async () => {
       await fetchPosts(undefined, true);
@@ -145,7 +139,6 @@ export default function FeedPage() {
     void load();
   }, [fetchPosts]);
 
-  // watch the invisible sentinel div at the bottom — when it enters the viewport, load more
   useEffect(() => {
     if (!sentinelRef.current) return;
 
@@ -161,14 +154,13 @@ export default function FeedPage() {
           void fetchPosts(cursor).finally(() => setLoadingMore(false));
         }
       },
-      { rootMargin: "200px" }, // start loading a bit before they actually hit the bottom
+      { rootMargin: "200px" },
     );
 
     observer.observe(sentinelRef.current);
     return () => observer.disconnect();
   }, [fetchPosts, hasMore, loadingMore, initialLoading, cursor]);
 
-  // only start tracking a pull if the user is already at the top of the feed
   const handleTouchStart = (e: React.TouchEvent) => {
     const el = scrollRef.current;
     if (el && el.scrollTop === 0) {
@@ -177,7 +169,6 @@ export default function FeedPage() {
     }
   };
 
-  // translate how far they've pulled into a 0–100 progress value
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!pulling.current) return;
     const delta = e.touches[0]!.clientY - touchStartY.current;
@@ -186,7 +177,6 @@ export default function FeedPage() {
     }
   };
 
-  // if they pulled far enough, do a full refresh — otherwise snap back
   const handleTouchEnd = async () => {
     if (!pulling.current) return;
     pulling.current = false;
@@ -194,7 +184,7 @@ export default function FeedPage() {
     if (pullProgress >= 100) {
       setRefreshing(true);
       setPullProgress(0);
-      setCursor(undefined); // reset cursor so we start from the top again
+      setCursor(undefined);
       setHasMore(true);
       await fetchPosts(undefined, true);
       setRefreshing(false);
@@ -206,15 +196,13 @@ export default function FeedPage() {
   return (
     <div
       ref={scrollRef}
-      className="h-screen overflow-y-auto bg-black"
+      className="h-screen overflow-y-auto bg-black [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={() => void handleTouchEnd()}
     >
-      {/* pull ring — hides once a real refresh is in progress */}
       {!refreshing && <RefreshIndicator progress={pullProgress} />}
 
-      {/* spinner while refreshing */}
       {refreshing && (
         <div className="flex justify-center py-3">
           <div className="w-5 h-5 border-2 border-neutral-700 border-t-white rounded-full animate-spin" />
@@ -228,7 +216,6 @@ export default function FeedPage() {
           <StoriesBar />
 
           {posts.length === 0 ? (
-            // empty state — nobody has posted yet
             <div className="flex flex-col items-center justify-center py-24 text-center">
               <div className="w-16 h-16 rounded-full border-2 border-neutral-700 flex items-center justify-center mb-4">
                 <svg
@@ -259,23 +246,24 @@ export default function FeedPage() {
                 <Post
                   key={post.id}
                   id={post.id}
+                  authorId={post.author.id}                        // ← new
                   username={post.author.username}
                   avatar={post.author.avatarUrl ?? null}
                   imageUrl={post.imageUrl}
                   caption={post.caption ?? ""}
                   likes={post.likes.length}
                   createdAt={post.createdAt ?? ""}
-                  priority={index === 0} // eagerly load the first image only
+                  isFollowing={post.author.isFollowing ?? false}   // ← new
+                  priority={index === 0}
                 />
               ))}
 
-              {/* this div is invisible — the IntersectionObserver watches it to trigger the next page load */}
               <div ref={sentinelRef} className="py-6 flex justify-center">
                 {loadingMore && (
                   <div className="w-5 h-5 border-2 border-neutral-700 border-t-white rounded-full animate-spin" />
                 )}
                 {!hasMore && posts.length > 0 && (
-                  <p className="text-neutral-600 text-xs"> all caught up</p>
+                  <p className="text-neutral-600 text-xs">all caught up</p>
                 )}
               </div>
             </>
