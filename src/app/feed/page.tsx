@@ -9,10 +9,10 @@ interface PostType {
   imageUrl: string;
   caption?: string;
   author: {
-    id: string;           // ← needed for follow API
+    id: string;  
     username: string;
     avatarUrl?: string;
-    isFollowing?: boolean; // ← returned by your API
+    isFollowing?: boolean; 
   };
   likes: { id: string }[];
   createdAt?: string;
@@ -246,14 +246,14 @@ export default function FeedPage() {
                 <Post
                   key={post.id}
                   id={post.id}
-                  authorId={post.author.id}                        // ← new
+                  authorId={post.author.id}
                   username={post.author.username}
                   avatar={post.author.avatarUrl ?? null}
                   imageUrl={post.imageUrl}
                   caption={post.caption ?? ""}
                   likes={post.likes.length}
                   createdAt={post.createdAt ?? ""}
-                  isFollowing={post.author.isFollowing ?? false}   // ← new
+                  isFollowing={post.author.isFollowing ?? false}  
                   priority={index === 0}
                 />
               ))}
