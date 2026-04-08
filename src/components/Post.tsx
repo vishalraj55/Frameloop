@@ -17,7 +17,7 @@ import {
   X,
 } from "lucide-react";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+// const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 function getRelativeTime(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -34,7 +34,7 @@ function getRelativeTime(dateStr: string): string {
 
 type PostProps = {
   id: string;
-  authorId: string; // ← new: needed for follow API
+  authorId: string; 
   username: string;
   avatar: string | null;
   imageUrl: string;
@@ -42,7 +42,7 @@ type PostProps = {
   likes: number;
   createdAt: string;
   priority?: boolean;
-  isFollowing?: boolean; // ← new: initial follow state from API
+  isFollowing?: boolean; 
   onDelete?: (id: string) => void;
 };
 
@@ -254,7 +254,7 @@ function setStored(key: string, val: string[]) {
 
 export default function Post({
   id,
-  authorId,
+  // authorId,
   username,
   avatar,
   imageUrl,
@@ -336,7 +336,7 @@ export default function Post({
     }
   }
 
-  /* ── Unfollow from menu (shows confirm first) ── */
+  /* ── Unfollow from menu ── */
   async function doUnfollow() {
     setConfirmUnfollow(false);
     setMenuOpen(false);
@@ -557,7 +557,7 @@ export default function Post({
         )}
 
         {/* ── Time ── */}
-        <div className="px-3 pb-3 text-[11px] text-zinc-500 uppercase tracking-wide mt-1">
+        <div className="px-3 pb-3 text-[11px] text-zinc-500 tracking-wide mt-1">
           {getRelativeTime(createdAt)}
         </div>
 

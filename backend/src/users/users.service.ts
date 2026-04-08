@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -80,17 +81,42 @@ export class UsersService {
     return this.prisma.user.delete({ where: { id } });
   }
 
-  /* ── Follow ── */
+  async getFollowers(username: string) {
+    const user = await this.prisma.user.findUnique({ where: { username } });
+    if (!user) throw new NotFoundException('User not found');
+
+    return this.prisma.follow.findMany({
+      where: { followingId: user.id },
+      include: {
+        follower: { select: { id: true, username: true, avatarUrl: true } },
+      },
+    });
+  }
+
+  async getFollowing(username: string) {
+    const user = await this.prisma.user.findUnique({ where: { username } });
+    if (!user) throw new NotFoundException('User not found');
+
+    return this.prisma.follow.findMany({
+      where: { followerId: user.id },
+      include: {
+        following: { select: { id: true, username: true, avatarUrl: true } },
+      },
+    });
+  }
+
   async followUser(username: string, followerId: string) {
+    if (!followerId) throw new BadRequestException('followerId is required');
+
     const target = await this.prisma.user.findUnique({ where: { username } });
     if (!target) throw new NotFoundException('User not found');
 
+    if (target.id === followerId)
+      throw new BadRequestException('Cannot follow yourself');
+
     const existing = await this.prisma.follow.findUnique({
       where: {
-        followerId_followingId: {
-          followerId,
-          followingId: target.id,
-        },
+        followerId_followingId: { followerId, followingId: target.id },
       },
     });
 
@@ -103,17 +129,18 @@ export class UsersService {
     return { following: true };
   }
 
-  // /* ── Unfollow ── */
   async unfollowUser(username: string, followerId: string) {
+    if (!followerId) throw new BadRequestException('followerId is required');
+
     const target = await this.prisma.user.findUnique({ where: { username } });
     if (!target) throw new NotFoundException('User not found');
 
+    if (target.id === followerId)
+      throw new BadRequestException('Cannot unfollow yourself');
+
     const existing = await this.prisma.follow.findUnique({
       where: {
-        followerId_followingId: {
-          followerId,
-          followingId: target.id,
-        },
+        followerId_followingId: { followerId, followingId: target.id },
       },
     });
 
@@ -121,10 +148,7 @@ export class UsersService {
 
     await this.prisma.follow.delete({
       where: {
-        followerId_followingId: {
-          followerId,
-          followingId: target.id,
-        },
+        followerId_followingId: { followerId, followingId: target.id },
       },
     });
 

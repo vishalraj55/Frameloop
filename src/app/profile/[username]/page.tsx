@@ -85,10 +85,8 @@ export default function ProfilePage() {
   return (
     <div className="max-w-117.5 mx-auto bg-black text-white min-h-screen">
 
-      {/* Header row: avatar + stats */}
       <div className="flex items-center gap-6 px-4 pt-5 pb-4">
 
-        {/* Avatar with optional story ring */}
         <Link href={profile.hasActiveStory ? `/story/${profile.username}` : '#'}>
           <div
             className={`p-0.5 rounded-full ${
