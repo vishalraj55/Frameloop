@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import Image from 'next/image';
-import Link from 'next/link';
-import { useSession } from 'next-auth/react';
-import { Grid2x2, Bookmark, Plus } from 'lucide-react';
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Image from "next/image";
+import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { Grid2x2, Bookmark, Plus } from "lucide-react";
 
 interface UserProfile {
   id: string;
@@ -27,6 +27,7 @@ interface PostType {
 
 export default function ProfilePage() {
   const params = useParams();
+  const router = useRouter();
   const username = params?.username as string;
 
   const { data: session } = useSession();
@@ -35,14 +36,17 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'posts' | 'saved'>('posts');
+  const [activeTab, setActiveTab] = useState<"posts" | "saved">("posts");
 
   useEffect(() => {
     if (!username) return;
     const fetchProfile = async () => {
       try {
         const res = await fetch(`/api/users/${username}`);
-        if (!res.ok) { setProfile(null); return; }
+        if (!res.ok) {
+          setProfile(null);
+          return;
+        }
         const data = (await res.json()) as UserProfile;
         setProfile(data);
         setIsFollowing(data.isFollowing ?? false);
@@ -56,8 +60,18 @@ export default function ProfilePage() {
   }, [username]);
 
   const handleFollow = async () => {
+    const token = session?.user?.token;
+    const wasFollowing = isFollowing;
+
     try {
-      const res = await fetch(`/api/users/${username}/follow`, { method: 'POST' });
+      const res = await fetch(`/api/users/${username}/follow`, {
+        method: wasFollowing ? "DELETE" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ followerId: session?.user?.id }),
+      });
       if (res.ok) setIsFollowing((prev) => !prev);
     } catch (err) {
       console.error(err);
@@ -87,12 +101,12 @@ export default function ProfilePage() {
 
       <div className="flex items-center gap-6 px-4 pt-5 pb-4">
 
-        <Link href={profile.hasActiveStory ? `/story/${profile.username}` : '#'}>
+        <Link href={profile.hasActiveStory ? `/story/${profile.username}` : "#"}>
           <div
             className={`p-0.5 rounded-full ${
               profile.hasActiveStory
-                ? 'bg-linear-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888]'
-                : 'bg-[#262626]'
+                ? "bg-linear-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888]"
+                : "bg-[#262626]"
             }`}
           >
             <div className="p-0.5 rounded-full bg-black">
@@ -121,18 +135,28 @@ export default function ProfilePage() {
               <div className="text-[15px] font-semibold">{profile.posts.length}</div>
               <div className="text-[12px] text-[#8e8e8e]">posts</div>
             </div>
-            <div className="text-center">
+
+            {/* Followers */}
+            <button
+              onClick={() => router.push(`/users/${username}/followers`)}
+              className="text-center"
+            >
               <div className="text-[15px] font-semibold">
                 {(profile.followersCount ?? 0).toLocaleString()}
               </div>
               <div className="text-[12px] text-[#8e8e8e]">followers</div>
-            </div>
-            <div className="text-center">
+            </button>
+
+            {/* Following */}
+            <button
+              onClick={() => router.push(`/users/${username}/following`)}
+              className="text-center"
+            >
               <div className="text-[15px] font-semibold">
                 {(profile.followingCount ?? 0).toLocaleString()}
               </div>
               <div className="text-[12px] text-[#8e8e8e]">following</div>
-            </div>
+            </button>
           </div>
 
           {/* Action button */}
@@ -148,11 +172,11 @@ export default function ProfilePage() {
               onClick={handleFollow}
               className={`w-full rounded-lg py-1.5 text-[13px] font-semibold ${
                 isFollowing
-                  ? 'bg-[#1c1c1c] border border-[#363636] text-white'
-                  : 'bg-[#0095f6] text-white'
+                  ? "bg-[#1c1c1c] border border-[#363636] text-white"
+                  : "bg-[#0095f6] text-white"
               }`}
             >
-              {isFollowing ? 'Following' : 'Follow'}
+              {isFollowing ? "Following" : "Follow"}
             </button>
           )}
         </div>
@@ -181,26 +205,26 @@ export default function ProfilePage() {
       {/* Tab bar */}
       <div className="flex border-t border-[#262626]">
         <button
-          onClick={() => setActiveTab('posts')}
+          onClick={() => setActiveTab("posts")}
           className={`flex-1 flex justify-center py-3 ${
-            activeTab === 'posts' ? 'border-t border-white' : ''
+            activeTab === "posts" ? "border-t border-white" : ""
           }`}
         >
           <Grid2x2
             size={22}
-            className={activeTab === 'posts' ? 'text-white' : 'text-[#8e8e8e]'}
+            className={activeTab === "posts" ? "text-white" : "text-[#8e8e8e]"}
           />
         </button>
         {isOwnProfile && (
           <button
-            onClick={() => setActiveTab('saved')}
+            onClick={() => setActiveTab("saved")}
             className={`flex-1 flex justify-center py-3 ${
-              activeTab === 'saved' ? 'border-t border-white' : ''
+              activeTab === "saved" ? "border-t border-white" : ""
             }`}
           >
             <Bookmark
               size={22}
-              className={activeTab === 'saved' ? 'text-white' : 'text-[#8e8e8e]'}
+              className={activeTab === "saved" ? "text-white" : "text-[#8e8e8e]"}
             />
           </button>
         )}
@@ -216,7 +240,7 @@ export default function ProfilePage() {
           >
             <Image
               src={post.imageUrl}
-              alt={post.caption ?? ''}
+              alt={post.caption ?? ""}
               fill
               className="object-cover"
             />

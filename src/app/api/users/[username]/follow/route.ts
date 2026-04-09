@@ -16,10 +16,13 @@ export async function POST(
 ) {
   const { username } = await params;
   const body = await parseBody(req);
-
+  const auth = req.headers.get("Authorization"); 
   const res = await fetch(`${API_URL}/users/${username}/follow`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(auth && { Authorization: auth }), 
+    },
     body: JSON.stringify(body),
   });
 
@@ -33,10 +36,14 @@ export async function DELETE(
 ) {
   const { username } = await params;
   const body = await parseBody(req);
+  const auth = req.headers.get("Authorization"); 
 
   const res = await fetch(`${API_URL}/users/${username}/follow`, {
     method: "DELETE",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(auth && { Authorization: auth }), 
+    },
     body: JSON.stringify(body),
   });
 

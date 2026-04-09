@@ -42,6 +42,7 @@ export const authOptions: NextAuthOptions = {
             id: user.id.toString(),
             email: user.email,
             username: user.username,
+            token: data.access_token, 
           };
         } catch (error) {
           console.error("Auth error:", error);
@@ -56,17 +57,14 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.username = user.username;
-        token.email = user.email;
+        token.accessToken = user.token;
       }
       return token;
     },
-
     async session({ session, token }) {
-      session.user = {
-        id: token.id,
-        username: token.username,
-        email: token.email,
-      };
+      session.user.id = token.id;
+      session.user.username = token.username;
+      session.user.token = token.accessToken; 
       return session;
     },
   },

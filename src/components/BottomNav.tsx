@@ -56,9 +56,9 @@ export default function NavBar() {
         <div className="group/sidebar flex flex-col h-full w-20 hover:w-60 transition-[width] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden">
 
           <div className="px-6 mb-10">
-            <span className="text-white text-xl font-semibold tracking-tight opacity-0 group-hover/sidebar:opacity-100 transition-all duration-500 delay-100 whitespace-nowrap">
+            {/* <span className="text-white text-xl font-semibold tracking-tight opacity-0 group-hover/sidebar:opacity-100 transition-all duration-500 delay-100 whitespace-nowrap">
               Frameloop
-            </span>
+            </span> */}
           </div>
 
 
