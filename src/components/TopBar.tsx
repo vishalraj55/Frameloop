@@ -1,65 +1,73 @@
 "use client";
 
+import { useMemo, useCallback } from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { useParams, usePathname } from "next/navigation";
 import { LogOut } from "lucide-react";
 
+type Params = { username?: string };
+
 export default function TopBar() {
-  const { data: session } = useSession();
+  const { data } = useSession();
   const pathname = usePathname();
-  const params = useParams();
+  const { username } = useParams<Params>();
 
-  const isProfilePage = pathname.startsWith("/profile/");
-  const profileUsername = params?.username as string | undefined;
+  const isProfile = useMemo(
+    () => pathname?.startsWith("/profile/") && !!username,
+    [pathname, username]
+  );
 
-  let title = "Frameloop";
+  const title = useMemo(
+    () => (isProfile ? username : "Frameloop"),
+    [isProfile, username]
+  );
 
-  if (isProfilePage && profileUsername) {
-    title = profileUsername;
-  }
+  const font = useMemo(
+    () =>
+      isProfile
+        ? "system-ui,-apple-system,sans-serif"
+        : '"Billabong",cursive,"Segoe Script","Apple Chancery"',
+    [isProfile]
+  );
+
+  const handleSignOut = useCallback(
+    () => signOut({ callbackUrl: "/login" }),
+    []
+  );
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-black border-b border-[#262626]">
-      
-      <div className="max-w-lg mx-auto h-12 flex items-center justify-between px-4">
+    <>
+      <header className="fixed inset-x-0 top-0 z-50 bg-black border-b border-[#262626] h-12">
+        <div className="max-w-lg mx-auto h-full flex items-center justify-between px-4">
+          <h1
+            className="text-white text-lg tracking-wide select-none truncate max-w-[60%]"
+            style={{ fontFamily: font }}
+          >
+            {title}
+          </h1>
 
-        {/* LEFT SPACER (keeps center aligned) */}
-        {/* <div className="w-8" /> */}
-
-        {/* CENTER TITLE */}
-        <h1
-          className="text-white text-lg tracking-wide select-none truncate max-w-[60%] text-left"
-          style={{
-            fontFamily:
-              isProfilePage
-                ? "system-ui, -apple-system, sans-serif"
-                : '"Billabong", cursive, "Segoe Script", "Apple Chancery"',
-          }}
-        >
-          {title}
-        </h1>
-
-        {/* RIGHT */}
-        <div className="flex items-center">
-          {session ? (
-            <button
-              onClick={() => signOut({ callbackUrl: "/login" })}
-              className="p-2 rounded-full hover:bg-[#1a1a1a] transition"
-            >
-              <LogOut size={22} strokeWidth={1.8} className="text-white" />
-            </button>
-          ) : (
-            <Link
-              href="/login"
-              className="text-white text-sm font-semibold hover:opacity-80 transition"
-            >
-              Log in
-            </Link>
-          )}
+          <div className="flex items-center">
+            {data ? (
+              <button
+                onClick={handleSignOut}
+                className="p-2 rounded-full hover:bg-[#1a1a1a] transition"
+              >
+                <LogOut size={22} strokeWidth={1.8} className="text-white" />
+              </button>
+            ) : (
+              <Link
+                href="/login"
+                className="text-white text-sm font-semibold hover:opacity-80 transition"
+              >
+                Log in
+              </Link>
+            )}
+          </div>
         </div>
+      </header>
 
-      </div>
-    </header>
+      <div className="h-12 w-full shrink-0" />
+    </>
   );
 }

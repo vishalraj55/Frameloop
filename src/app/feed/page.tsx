@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
+import { useSession } from "next-auth/react";
 import Post from "@/components/Post";
 import StoriesBar from "@/components/StoriesBar";
 
@@ -9,10 +10,10 @@ interface PostType {
   imageUrl: string;
   caption?: string;
   author: {
-    id: string;  
+    id: string;
     username: string;
     avatarUrl?: string;
-    isFollowing?: boolean; 
+    isFollowing?: boolean;
   };
   likes: { id: string }[];
   createdAt?: string;
@@ -93,6 +94,7 @@ function RefreshIndicator({ progress }: { progress: number }) {
 }
 
 export default function FeedPage() {
+  const { data: session } = useSession();
   const [posts, setPosts] = useState<PostType[]>([]);
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [hasMore, setHasMore] = useState(true);
@@ -106,30 +108,37 @@ export default function FeedPage() {
   const touchStartY = useRef(0);
   const pulling = useRef(false);
 
-  const fetchPosts = useCallback(async (cursorParam?: string, replace = false) => {
-    try {
-      const params = new URLSearchParams();
-      params.set("limit", String(PAGE_SIZE));
-      if (cursorParam) params.set("cursor", cursorParam);
+  const fetchPosts = useCallback(
+    async (cursorParam?: string, replace = false) => {
+      try {
+        const params = new URLSearchParams();
+        params.set("limit", String(PAGE_SIZE));
+        if (cursorParam) params.set("cursor", cursorParam);
 
-      const res = await fetch(`${API_URL}/posts?${params.toString()}`);
-      const data = (await res.json()) as PostType[];
+        const res = await fetch(`${API_URL}/posts?${params.toString()}`, {
+          headers: {
+            Authorization: `Bearer ${session?.user?.token ?? ""}`,
+          },
+        });
+        const data = (await res.json()) as PostType[];
 
-      setPosts((prev) => {
-        if (replace) return data;
-        const seen = new Set(prev.map((p) => p.id));
-        return [...prev, ...data.filter((p) => !seen.has(p.id))];
-      });
+        setPosts((prev) => {
+          if (replace) return data;
+          const seen = new Set(prev.map((p) => p.id));
+          return [...prev, ...data.filter((p) => !seen.has(p.id))];
+        });
 
-      setHasMore(data.length === PAGE_SIZE);
+        setHasMore(data.length === PAGE_SIZE);
 
-      if (data.length > 0) {
-        setCursor(data[data.length - 1]!.id);
+        if (data.length > 0) {
+          setCursor(data[data.length - 1]!.id);
+        }
+      } catch (err) {
+        console.error("Failed to fetch posts:", err);
       }
-    } catch (err) {
-      console.error("Failed to fetch posts:", err);
-    }
-  }, []);
+    },
+    [session],
+  );
 
   useEffect(() => {
     const load = async () => {
@@ -144,12 +153,7 @@ export default function FeedPage() {
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (
-          entries[0]?.isIntersecting &&
-          hasMore &&
-          !loadingMore &&
-          !initialLoading
-        ) {
+        if (entries[0]?.isIntersecting && hasMore && !loadingMore && !initialLoading) {
           setLoadingMore(true);
           void fetchPosts(cursor).finally(() => setLoadingMore(false));
         }
@@ -253,7 +257,7 @@ export default function FeedPage() {
                   caption={post.caption ?? ""}
                   likes={post.likes.length}
                   createdAt={post.createdAt ?? ""}
-                  isFollowing={post.author.isFollowing ?? false}  
+                  isFollowing={post.author.isFollowing ?? false}
                   priority={index === 0}
                 />
               ))}

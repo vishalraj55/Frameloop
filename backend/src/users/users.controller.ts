@@ -6,6 +6,7 @@ import {
   Delete,
   Param,
   Body,
+  Req,
   UploadedFile,
   UseInterceptors,
   UseGuards,
@@ -29,8 +30,9 @@ export class UsersController {
   }
 
   @Get(':username')
-  getProfile(@Param('username') username: string) {
-    return this.usersService.getProfile(username);
+  // @UseGuards(JwtAuthGuard)
+  getProfile(@Param('username') username: string, @Req() req: AuthRequest) {
+    return this.usersService.getProfile(username, req.user?.id);
   }
 
   @Get(':username/followers')
@@ -48,7 +50,7 @@ export class UsersController {
   @UseInterceptors(FileInterceptor('avatar', { storage: memoryStorage() }))
   async updateProfile(
     @Param('username') username: string,
-    req: AuthRequest,
+    @Req() req: AuthRequest,
     @UploadedFile() file?: Express.Multer.File,
     @Body() body?: { bio?: string; username?: string },
   ) {
@@ -83,7 +85,7 @@ export class UsersController {
 
   @Post(':username/follow')
   @UseGuards(JwtAuthGuard)
-  follow(@Param('username') username: string, req: AuthRequest) {
+  follow(@Param('username') username: string, @Req() req: AuthRequest) {
     if (!req.user) {
       throw new ForbiddenException();
     }
@@ -93,7 +95,7 @@ export class UsersController {
 
   @Delete(':username/follow')
   @UseGuards(JwtAuthGuard)
-  unfollow(@Param('username') username: string, req: AuthRequest) {
+  unfollow(@Param('username') username: string, @Req() req: AuthRequest) {
     if (!req.user) {
       throw new ForbiddenException();
     }

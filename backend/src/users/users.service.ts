@@ -20,7 +20,7 @@ export class UsersService {
     });
   }
 
-  async getProfile(username: string) {
+  async getProfile(username: string, currentUserId?: string) {
     const user = await this.prisma.user.findUnique({
       where: { username },
       select: {
@@ -49,7 +49,26 @@ export class UsersService {
     });
 
     if (!user) throw new NotFoundException('User not found');
-    return user;
+
+    let isFollowing = false;
+    if (currentUserId) {
+      const follow = await this.prisma.follow.findUnique({
+        where: {
+          followerId_followingId: {
+            followerId: currentUserId,
+            followingId: user.id,
+          },
+        },
+      });
+      isFollowing = !!follow;
+    }
+
+    return {
+      ...user,
+      followersCount: user._count.followers,
+      followingCount: user._count.following,
+      isFollowing,
+    };
   }
 
   async updateProfile(

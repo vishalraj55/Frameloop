@@ -67,10 +67,8 @@ export default function ProfilePage() {
       const res = await fetch(`/api/users/${username}/follow`, {
         method: wasFollowing ? "DELETE" : "POST",
         headers: {
-          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ followerId: session?.user?.id }),
       });
       if (res.ok) setIsFollowing((prev) => !prev);
     } catch (err) {
@@ -169,7 +167,7 @@ export default function ProfilePage() {
             </Link>
           ) : (
             <button
-              onClick={handleFollow}
+              onClick={() => void handleFollow()}
               className={`w-full rounded-lg py-1.5 text-[13px] font-semibold ${
                 isFollowing
                   ? "bg-[#1c1c1c] border border-[#363636] text-white"

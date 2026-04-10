@@ -2,10 +2,12 @@ import "./globals.css";
 import TopBar from "@/components/TopBar";
 import NavBar from "@/components/BottomNav";
 import Providers from "@/components/Providers";
+import type { Metadata } from "next";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Frameloop",
   description: "A calm, minimal photo sharing app",
+  icons: { icon: "/Logo.png",},
 };
 
 export default function RootLayout({
@@ -24,16 +26,7 @@ export default function RootLayout({
           <div>
             <NavBar />
           </div>
-
-          <main
-            className="
-              mx-auto
-              max-w-160
-              px-4
-              pt-11 md:pt-6
-              pb-16 md:pb-6
-            "
-          >
+          <main className="mx-auto max-w-160 px-2 pt-1 md:pt-2 pb-16 md:pb-6">
             {children}
           </main>
         </Providers>
