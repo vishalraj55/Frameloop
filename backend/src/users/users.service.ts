@@ -1,7 +1,6 @@
 import {
   Injectable,
   NotFoundException,
-  ConflictException,
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
@@ -139,7 +138,7 @@ export class UsersService {
       },
     });
 
-    if (existing) throw new ConflictException('Already following');
+    if (existing) return { following: true };
 
     await this.prisma.follow.create({
       data: { followerId, followingId: target.id },
@@ -163,7 +162,7 @@ export class UsersService {
       },
     });
 
-    if (!existing) throw new NotFoundException('Not following');
+    if (!existing) return { following: false };
 
     await this.prisma.follow.delete({
       where: {

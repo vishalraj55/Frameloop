@@ -5,10 +5,24 @@ import { PrismaService } from '../prisma/prisma.service';
 export class StoriesService {
   constructor(private prisma: PrismaService) {}
 
-  getActiveStories() {
+  getActiveStories(currentUserId?: string) {
     return this.prisma.story.findMany({
       where: {
         expiresAt: { gt: new Date() },
+        ...(currentUserId
+          ? {
+              OR: [
+                { authorId: currentUserId },
+                {
+                  author: {
+                    followers: {
+                      some: { followerId: currentUserId },
+                    },
+                  },
+                },
+              ],
+            }
+          : {}),
       },
       include: {
         author: {

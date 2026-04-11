@@ -17,6 +17,7 @@ import { memoryStorage } from 'multer';
 import { Readable } from 'stream';
 import { v2 as cloudinary } from 'cloudinary';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
 import type { AuthRequest } from '../auth/jwt-auth.guard';
 import { UsersService } from './users.service';
 
@@ -30,7 +31,7 @@ export class UsersController {
   }
 
   @Get(':username')
-  // @UseGuards(JwtAuthGuard)
+  @UseGuards(OptionalJwtAuthGuard)
   getProfile(@Param('username') username: string, @Req() req: AuthRequest) {
     return this.usersService.getProfile(username, req.user?.id);
   }

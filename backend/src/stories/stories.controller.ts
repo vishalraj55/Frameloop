@@ -7,20 +7,25 @@ import {
   UseInterceptors,
   Body,
   BadRequestException,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { Readable } from 'stream';
 import { v2 as cloudinary } from 'cloudinary';
 import { StoriesService } from './stories.service';
+import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
+import type { AuthRequest } from '../auth/jwt-auth.guard';
 
 @Controller('stories')
 export class StoriesController {
   constructor(private storiesService: StoriesService) {}
 
   @Get()
-  getAll() {
-    return this.storiesService.getActiveStories();
+  @UseGuards(OptionalJwtAuthGuard)
+  getAll(@Req() req: AuthRequest) {
+    return this.storiesService.getActiveStories(req.user?.id);
   }
 
   @Get(':username')
@@ -36,15 +41,13 @@ export class StoriesController {
   ) {
     if (!file) throw new BadRequestException('Image is required');
 
-    // figure out if it's a video or image so we tell cloudinary the right resource type
     const isVideo = file.mimetype.startsWith('video/');
 
     const imageUrl = await new Promise<string>((resolve, reject) => {
       const upload = cloudinary.uploader.upload_stream(
         {
           folder: `users/${body.authorId}/stories`,
-          resource_type: isVideo ? 'video' : 'image', // critical — without this cloudinary rejects videos
-          // for images, tell cloudinary to accept any format including the canvas-compressed jpeg
+          resource_type: isVideo ? 'video' : 'image',
           ...(isVideo ? {} : { format: 'jpg' }),
         },
         (error, result) => {

@@ -32,17 +32,24 @@ export default function ProfilePage() {
 
   const { data: session } = useSession();
   const currentUser = session?.user?.username;
+  const token = session?.user?.token;
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [followHovered, setFollowHovered] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"posts" | "saved">("posts");
 
   useEffect(() => {
     if (!username) return;
+
     const fetchProfile = async () => {
       try {
-        const res = await fetch(`/api/users/${username}`);
+        const headers: HeadersInit = {};
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+
+        const res = await fetch(`/api/users/${username}`, { headers });
         if (!res.ok) {
           setProfile(null);
           return;
@@ -56,12 +63,26 @@ export default function ProfilePage() {
         setLoading(false);
       }
     };
+
     void fetchProfile();
-  }, [username]);
+  }, [username, token]);
 
   const handleFollow = async () => {
-    const token = session?.user?.token;
+    if (followLoading) return;
+    setFollowLoading(true);
+
     const wasFollowing = isFollowing;
+    setIsFollowing(!wasFollowing);
+    setProfile((prev) =>
+      prev
+        ? {
+            ...prev,
+            followersCount: wasFollowing
+              ? prev.followersCount - 1
+              : prev.followersCount + 1,
+          }
+        : prev
+    );
 
     try {
       const res = await fetch(`/api/users/${username}/follow`, {
@@ -70,9 +91,35 @@ export default function ProfilePage() {
           Authorization: `Bearer ${token}`,
         },
       });
-      if (res.ok) setIsFollowing((prev) => !prev);
+
+      if (!res.ok) {
+        setIsFollowing(wasFollowing);
+        setProfile((prev) =>
+          prev
+            ? {
+                ...prev,
+                followersCount: wasFollowing
+                  ? prev.followersCount + 1
+                  : prev.followersCount - 1,
+              }
+            : prev
+        );
+      }
     } catch (err) {
       console.error(err);
+      setIsFollowing(wasFollowing);
+      setProfile((prev) =>
+        prev
+          ? {
+              ...prev,
+              followersCount: wasFollowing
+                ? prev.followersCount + 1
+                : prev.followersCount - 1,
+            }
+          : prev
+      );
+    } finally {
+      setFollowLoading(false);
     }
   };
 
@@ -93,6 +140,21 @@ export default function ProfilePage() {
   }
 
   const isOwnProfile = currentUser === profile.username;
+
+  const followButtonLabel = () => {
+    if (followLoading) return "...";
+    if (isFollowing) return followHovered ? "Unfollow" : "Following";
+    return "Follow";
+  };
+
+  const followButtonClass = () => {
+    if (isFollowing) {
+      return followHovered
+        ? "bg-[#1c1c1c] border border-red-500 text-red-500"
+        : "bg-[#1c1c1c] border border-[#363636] text-white";
+    }
+    return "bg-[#0095f6] text-white";
+  };
 
   return (
     <div className="max-w-117.5 mx-auto bg-black text-white min-h-screen">
@@ -134,7 +196,6 @@ export default function ProfilePage() {
               <div className="text-[12px] text-[#8e8e8e]">posts</div>
             </div>
 
-            {/* Followers */}
             <button
               onClick={() => router.push(`/users/${username}/followers`)}
               className="text-center"
@@ -145,7 +206,6 @@ export default function ProfilePage() {
               <div className="text-[12px] text-[#8e8e8e]">followers</div>
             </button>
 
-            {/* Following */}
             <button
               onClick={() => router.push(`/users/${username}/following`)}
               className="text-center"
@@ -168,13 +228,12 @@ export default function ProfilePage() {
           ) : (
             <button
               onClick={() => void handleFollow()}
-              className={`w-full rounded-lg py-1.5 text-[13px] font-semibold ${
-                isFollowing
-                  ? "bg-[#1c1c1c] border border-[#363636] text-white"
-                  : "bg-[#0095f6] text-white"
-              }`}
+              onMouseEnter={() => setFollowHovered(true)}
+              onMouseLeave={() => setFollowHovered(false)}
+              disabled={followLoading}
+              className={`w-full rounded-lg py-1.5 text-[13px] font-semibold transition-colors duration-150 ${followButtonClass()}`}
             >
-              {isFollowing ? "Following" : "Follow"}
+              {followButtonLabel()}
             </button>
           )}
         </div>

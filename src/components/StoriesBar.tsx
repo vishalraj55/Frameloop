@@ -29,7 +29,6 @@ async function compressImage(file: File): Promise<Blob> {
 
     img.onload = () => {
       URL.revokeObjectURL(url);
-
       const MAX = 1080;
       let { width, height } = img;
       if (width > height && width > MAX) {
@@ -39,15 +38,12 @@ async function compressImage(file: File): Promise<Blob> {
         width = Math.round((width * MAX) / height);
         height = MAX;
       }
-
       const canvas = document.createElement('canvas');
       canvas.width = width;
       canvas.height = height;
-
       const ctx = canvas.getContext('2d');
       if (!ctx) return reject(new Error('Canvas not supported'));
       ctx.drawImage(img, 0, 0, width, height);
-
       canvas.toBlob(
         (blob) => {
           if (!blob) return reject(new Error('Compression failed'));
@@ -91,8 +87,8 @@ async function compressVideo(file: File): Promise<Blob> {
       const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
         ? 'video/webm;codecs=vp9'
         : MediaRecorder.isTypeSupported('video/webm;codecs=vp8')
-        ? 'video/webm;codecs=vp8'
-        : 'video/webm';
+          ? 'video/webm;codecs=vp8'
+          : 'video/webm';
 
       const stream = canvas.captureStream(30);
       const recorder = new MediaRecorder(stream, {
@@ -104,12 +100,10 @@ async function compressVideo(file: File): Promise<Blob> {
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunks.push(e.data);
       };
-
       recorder.onstop = () => {
         URL.revokeObjectURL(url);
         resolve(new Blob(chunks, { type: mimeType }));
       };
-
       recorder.onerror = () => reject(new Error('Video compression failed'));
 
       let animFrame: number;
@@ -140,7 +134,9 @@ async function compressVideo(file: File): Promise<Blob> {
 }
 
 export default function StoriesBar() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+  const token = session?.user?.token ?? null;
+
   const [stories, setStories] = useState<StoryType[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadLabel, setUploadLabel] = useState('Your story');
@@ -160,23 +156,42 @@ export default function StoriesBar() {
   );
 
   useEffect(() => {
+    if (status === 'loading') return;
+
     const fetchStories = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/stories`);
+        const headers: HeadersInit = {};
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/stories`, {
+          headers,
+        });
         const data = (await res.json()) as StoryType[];
         setStories(data);
       } catch (err) {
         console.error('Failed to fetch stories:', err);
       }
     };
+
     void fetchStories();
-  }, []);
+  }, [token, status]);
+
+  const fetchStories = async () => {
+    try {
+      const headers: HeadersInit = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/stories`, { headers });
+      const data = (await res.json()) as StoryType[];
+      setStories(data);
+    } catch (err) {
+      console.error('Failed to fetch stories:', err);
+    }
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // pull the user id straight from the nextauth session
     const authorId = session?.user?.id;
     if (!authorId) {
       alert('You must be logged in to post a story.');
@@ -195,7 +210,6 @@ export default function StoriesBar() {
       setUploading(true);
 
       let compressed: Blob;
-
       if (isImage) {
         setUploadLabel('Compressing...');
         compressed = await compressImage(file);
@@ -211,10 +225,6 @@ export default function StoriesBar() {
         type: compressed.type,
       });
 
-      const originalMB = (file.size / 1024 / 1024).toFixed(1);
-      const compressedMB = (compressedFile.size / 1024 / 1024).toFixed(1);
-      console.log(`Compressed: ${originalMB}MB → ${compressedMB}MB`);
-
       const form = new FormData();
       form.append('image', compressedFile);
       form.append('authorId', authorId);
@@ -226,10 +236,7 @@ export default function StoriesBar() {
 
       if (!res.ok) throw new Error('Upload failed');
 
-      // refresh the bar so the new story shows up immediately
-      const updated = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/stories`);
-      const data = (await updated.json()) as StoryType[];
-      setStories(data);
+      await fetchStories();
     } catch (err) {
       console.error('Story upload failed:', err);
       alert('Failed to upload story. Please try again.');
@@ -244,7 +251,6 @@ export default function StoriesBar() {
     <section className="bg-black border-b border-[#262626] overflow-x-auto scrollbar-hide">
       <div className="flex gap-3 px-3 py-3 w-max">
 
-        {/* hidden file picker */}
         <input
           ref={fileInputRef}
           type="file"
@@ -253,7 +259,6 @@ export default function StoriesBar() {
           onChange={(e) => void handleFileChange(e)}
         />
 
-        {/* Your Story button */}
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
@@ -273,7 +278,6 @@ export default function StoriesBar() {
           </span>
         </button>
 
-        {/* other users' stories */}
         {stories.map((story) => {
           const isSeen = seenStories.includes(story.author.username);
 
