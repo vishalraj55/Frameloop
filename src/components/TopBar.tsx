@@ -3,19 +3,24 @@
 import { useMemo, useCallback } from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { useParams, usePathname } from "next/navigation";
-import { LogOut } from "lucide-react";
+import { useParams, usePathname, useRouter } from "next/navigation";
+import { Settings, LogOut } from "lucide-react";
 
 type Params = { username?: string };
 
 export default function TopBar() {
   const { data } = useSession();
   const pathname = usePathname();
+  const router = useRouter();
   const { username } = useParams<Params>();
 
   const isProfile = useMemo(
     () => pathname?.startsWith("/profile/") && !!username,
     [pathname, username]
+  );
+  const isOwnProfile = useMemo(
+    () => isProfile && data?.user?.username === username,
+    [isProfile, data?.user?.username, username]
   );
 
   const title = useMemo(
@@ -47,11 +52,22 @@ export default function TopBar() {
             {title}
           </h1>
 
-          <div className="flex items-center">
+          <div className="flex items-center gap-1">
+            {isOwnProfile && (
+              <button
+                onClick={() => router.push("/settings")}
+                className="p-2 rounded-full hover:bg-[#1a1a1a] transition"
+                aria-label="Settings"
+              >
+                <Settings size={22} strokeWidth={1.8} className="text-white" />
+              </button>
+            )}
+
             {data ? (
               <button
                 onClick={handleSignOut}
                 className="p-2 rounded-full hover:bg-[#1a1a1a] transition"
+                aria-label="Sign out"
               >
                 <LogOut size={22} strokeWidth={1.8} className="text-white" />
               </button>

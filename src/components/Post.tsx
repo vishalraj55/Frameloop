@@ -17,8 +17,6 @@ import {
   X,
 } from "lucide-react";
 
-// const API_URL = process.env.NEXT_PUBLIC_API_URL;
-
 function getRelativeTime(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
@@ -34,15 +32,16 @@ function getRelativeTime(dateStr: string): string {
 
 type PostProps = {
   id: string;
-  authorId: string; 
+  authorId: string;
   username: string;
   avatar: string | null;
   imageUrl: string;
   caption?: string;
   likes: number;
+  isLiked?: boolean;
   createdAt: string;
   priority?: boolean;
-  isFollowing?: boolean; 
+  isFollowing?: boolean;
   onDelete?: (id: string) => void;
 };
 
@@ -69,11 +68,7 @@ function HeartBurst({ show }: { show: boolean }) {
         show ? "opacity-100 scale-100" : "opacity-0 scale-50"
       }`}
     >
-      <Heart
-        size={90}
-        fill="#ed4956"
-        className="text-[#ed4956] drop-shadow-lg"
-      />
+      <Heart size={90} fill="#ed4956" className="text-[#ed4956] drop-shadow-lg" />
     </div>
   );
 }
@@ -97,11 +92,7 @@ function MenuItem({
       >
         <span
           className={`text-[17px] ${
-            danger
-              ? "text-[#ed4956] font-semibold"
-              : last
-                ? "text-[#8e8e8e]"
-                : "text-white"
+            danger ? "text-[#ed4956] font-semibold" : last ? "text-[#8e8e8e]" : "text-white"
           }`}
         >
           {label}
@@ -112,13 +103,7 @@ function MenuItem({
   );
 }
 
-function Sheet({
-  children,
-  onClose,
-}: {
-  children: React.ReactNode;
-  onClose: () => void;
-}) {
+function Sheet({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
     <div
       className="fixed inset-0 z-100 flex flex-col justify-end"
@@ -194,9 +179,7 @@ function ShareSheet({
 
   return (
     <Sheet onClose={onClose}>
-      <p className="text-center text-[17px] font-semibold text-white pt-4 pb-3">
-        Share
-      </p>
+      <p className="text-center text-[17px] font-semibold text-white pt-4 pb-3">Share</p>
       <div className="h-px bg-[#262626]" />
       <button
         onClick={copyLink}
@@ -209,9 +192,7 @@ function ShareSheet({
             <LinkIcon size={20} className="text-white" />
           )}
         </div>
-        <span className="text-[15px] text-white">
-          {copied ? "Link copied!" : "Copy link"}
-        </span>
+        <span className="text-[15px] text-white">{copied ? "Link copied!" : "Copy link"}</span>
       </button>
       {typeof navigator !== "undefined" && "share" in navigator && (
         <button
@@ -230,10 +211,7 @@ function ShareSheet({
         </button>
       )}
       <div className="h-px bg-[#262626]" />
-      <button
-        onClick={onClose}
-        className="w-full py-4 text-[15px] text-white font-semibold"
-      >
+      <button onClick={onClose} className="w-full py-4 text-[15px] text-white font-semibold">
         Cancel
       </button>
     </Sheet>
@@ -254,12 +232,12 @@ function setStored(key: string, val: string[]) {
 
 export default function Post({
   id,
-  // authorId,
   username,
   avatar,
   imageUrl,
   caption,
   likes,
+  isLiked: initialIsLiked = false,
   createdAt,
   priority = false,
   isFollowing: initialIsFollowing = false,
@@ -271,64 +249,70 @@ export default function Post({
   const isOwner = session?.user?.username === username;
 
   /* ── State ── */
-  const [liked, setLiked] = useState(() =>
-    getStored("likedPosts").includes(id),
-  );
-  const [saved, setSaved] = useState(() =>
-    getStored("savedPosts").includes(id),
-  );
-  const [hidden, setHidden] = useState(() =>
-    getStored("hiddenPosts").includes(id),
-  );
+  const [liked, setLiked] = useState(initialIsLiked);
+  const [likeCount, setLikeCount] = useState(likes);
+  const [likeLoading, setLikeLoading] = useState(false);
+
+  const [saved, setSaved] = useState(() => getStored("savedPosts").includes(id));
+  const [hidden, setHidden] = useState(() => getStored("hiddenPosts").includes(id));
   const [following, setFollowing] = useState(initialIsFollowing);
   const [followLoading, setFollowLoading] = useState(false);
-  const [likeCount, setLikeCount] = useState(
-    likes + (getStored("likedPosts").includes(id) ? 1 : 0),
-  );
   const [heartBurst, setHeartBurst] = useState(false);
   const [commentOpen, setCommentOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
-
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmUnfollow, setConfirmUnfollow] = useState(false);
   const [confirmReport, setConfirmReport] = useState(false);
   const [reportDone, setReportDone] = useState(false);
-
-  const [toast, setToast] = useState<{ msg: string; type: ToastType }>({
-    msg: "",
-    type: null,
-  });
+  const [toast, setToast] = useState<{ msg: string; type: ToastType }>({ msg: "", type: null });
 
   function showToast(msg: string, type: ToastType) {
     setToast({ msg, type });
     setTimeout(() => setToast({ msg: "", type: null }), 2500);
   }
 
+  /* ── Like (hits API, saves to DB) ── */
+  async function toggleLike() {
+    if (likeLoading) return;
+
+    // Optimistic update
+    const wasLiked = liked;
+    setLiked(!wasLiked);
+    setLikeCount((p) => (wasLiked ? p - 1 : p + 1));
+    setLikeLoading(true);
+
+    try {
+      const res = await fetch(`/api/posts/${id}/like`, { method: "POST" });
+      if (!res.ok) throw new Error();
+      const data = await res.json() as { liked: boolean; count: number };
+      setLiked(data.liked);
+      setLikeCount(data.count);
+    } catch {
+      // Revert on failure
+      setLiked(wasLiked);
+      setLikeCount((p) => (wasLiked ? p + 1 : p - 1));
+      showToast("Failed to like. Try again.", "error");
+    } finally {
+      setLikeLoading(false);
+    }
+  }
+
   /* ── Follow / Unfollow ── */
   async function toggleFollow() {
     if (!session?.user?.id || followLoading) return;
-
-    // Optimistic update
     const wasFollowing = following;
     setFollowing(!wasFollowing);
     setFollowLoading(true);
-
     try {
       const res = await fetch(`/api/users/${username}/follow`, {
         method: wasFollowing ? "DELETE" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ followerId: session.user.id }), 
+        body: JSON.stringify({ followerId: session.user.id }),
       });
-
-      if (!res.ok) throw new Error("Request failed");
-
-      showToast(
-        wasFollowing ? `Unfollowed @${username}` : `Following @${username}`,
-        "success",
-      );
+      if (!res.ok) throw new Error();
+      showToast(wasFollowing ? `Unfollowed @${username}` : `Following @${username}`, "success");
     } catch {
-      // Revert on failure
       setFollowing(wasFollowing);
       showToast("Something went wrong. Try again.", "error");
     } finally {
@@ -336,44 +320,25 @@ export default function Post({
     }
   }
 
-  /* ── Unfollow from menu ── */
   async function doUnfollow() {
     setConfirmUnfollow(false);
     setMenuOpen(false);
     await toggleFollow();
   }
 
-  /* ── Like ── */
-  function toggleLike() {
-    const arr = getStored("likedPosts");
-    const isLiked = arr.includes(id);
-    setStored(
-      "likedPosts",
-      isLiked ? arr.filter((x) => x !== id) : [...arr, id],
-    );
-    setLiked(!isLiked);
-    setLikeCount((p) => p + (isLiked ? -1 : 1));
-  }
-
   function toggleSave() {
     const arr = getStored("savedPosts");
     const isSaved = arr.includes(id);
-    setStored(
-      "savedPosts",
-      isSaved ? arr.filter((x) => x !== id) : [...arr, id],
-    );
+    setStored("savedPosts", isSaved ? arr.filter((x) => x !== id) : [...arr, id]);
     setSaved(!isSaved);
-    showToast(
-      isSaved ? "Removed from saved" : "Saved to collection",
-      "success",
-    );
+    showToast(isSaved ? "Removed from saved" : "Saved to collection", "success");
   }
 
   function handleDoubleTap() {
     const now = Date.now();
     if (now - lastTapRef.current < 300) {
       if (!liked) {
-        toggleLike();
+        void toggleLike();
         setHeartBurst(true);
         setTimeout(() => setHeartBurst(false), 800);
       }
@@ -415,7 +380,6 @@ export default function Post({
     }, 1200);
   }
 
-  /* ── Hidden state ── */
   if (hidden) {
     return (
       <article className="border-b border-zinc-800 px-4 py-5 flex items-center justify-between">
@@ -441,10 +405,7 @@ export default function Post({
       <article className="border-b border-zinc-800">
         {/* ── Header ── */}
         <div className="flex items-center justify-between px-3 py-2.5">
-          <Link
-            href={`/profile/${username}`}
-            className="flex items-center gap-2.5"
-          >
+          <Link href={`/profile/${username}`} className="flex items-center gap-2.5">
             {avatar ? (
               <Image
                 src={avatar}
@@ -462,14 +423,10 @@ export default function Post({
           </Link>
 
           <div className="flex items-center gap-2">
-            {/* Follow / Unfollow button — hidden for post owner */}
             {!isOwner && session?.user && (
               <>
-                {/* Separator dot shown only when following so layout stays stable */}
                 {following && (
-                  <span className="text-[#8e8e8e] text-[13px] select-none">
-                    •
-                  </span>
+                  <span className="text-[#8e8e8e] text-[13px] select-none">•</span>
                 )}
                 <button
                   onClick={() => void toggleFollow()}
@@ -482,11 +439,7 @@ export default function Post({
                 </button>
               </>
             )}
-
-            <button
-              onClick={() => setMenuOpen(true)}
-              className="p-1.5 -mr-1 active:opacity-60"
-            >
+            <button onClick={() => setMenuOpen(true)} className="p-1.5 -mr-1 active:opacity-60">
               <MoreHorizontal size={20} className="text-white" />
             </button>
           </div>
@@ -509,8 +462,9 @@ export default function Post({
         {/* ── Action bar ── */}
         <div className="flex items-center px-3 py-2 gap-4">
           <button
-            onClick={toggleLike}
-            className="active:scale-90 transition-transform"
+            onClick={() => void toggleLike()}
+            disabled={likeLoading}
+            className={`active:scale-90 transition-transform ${likeLoading ? "opacity-60" : ""}`}
           >
             <Heart
               size={26}
@@ -518,28 +472,15 @@ export default function Post({
               fill={liked ? "#ed4956" : "none"}
             />
           </button>
-          <button
-            onClick={() => setCommentOpen(true)}
-            className="active:scale-90 transition-transform"
-          >
+          <button onClick={() => setCommentOpen(true)} className="active:scale-90 transition-transform">
             <MessageCircle size={26} className="text-white" />
           </button>
-          <button
-            onClick={() => setShareOpen(true)}
-            className="active:scale-90 transition-transform"
-          >
+          <button onClick={() => setShareOpen(true)} className="active:scale-90 transition-transform">
             <Send size={24} className="text-white" />
           </button>
           <div className="flex-1" />
-          <button
-            onClick={toggleSave}
-            className="active:scale-90 transition-transform"
-          >
-            <Bookmark
-              size={26}
-              className="text-white transition-all"
-              fill={saved ? "white" : "none"}
-            />
+          <button onClick={toggleSave} className="active:scale-90 transition-transform">
+            <Bookmark size={26} className="text-white transition-all" fill={saved ? "white" : "none"} />
           </button>
         </div>
 
@@ -561,11 +502,7 @@ export default function Post({
           {getRelativeTime(createdAt)}
         </div>
 
-        <CommentSheet
-          postId={id}
-          open={commentOpen}
-          onClose={() => setCommentOpen(false)}
-        />
+        <CommentSheet postId={id} open={commentOpen} onClose={() => setCommentOpen(false)} />
       </article>
 
       {/* ── Three-dot menu ── */}
@@ -573,137 +510,31 @@ export default function Post({
         <Sheet onClose={() => setMenuOpen(false)}>
           {isOwner ? (
             <>
-              <MenuItem
-                label="Delete"
-                danger
-                onClick={() => {
-                  setMenuOpen(false);
-                  setConfirmDelete(true);
-                }}
-              />
-              <MenuItem
-                label="Edit"
-                onClick={() => {
-                  setMenuOpen(false);
-                  router.push(`/p/${id}/edit`);
-                }}
-              />
-              <MenuItem
-                label={saved ? "Remove from saved" : "Add to favourites"}
-                onClick={() => {
-                  setMenuOpen(false);
-                  toggleSave();
-                }}
-              />
-              <MenuItem
-                label="Go to post"
-                onClick={() => {
-                  setMenuOpen(false);
-                  router.push(`/p/${id}`);
-                }}
-              />
-              <MenuItem
-                label="Share to…"
-                onClick={() => {
-                  setMenuOpen(false);
-                  setShareOpen(true);
-                }}
-              />
-              <MenuItem
-                label="Copy link"
-                onClick={() => {
-                  void navigator.clipboard.writeText(
-                    `${window.location.origin}/p/${id}`,
-                  );
-                  setMenuOpen(false);
-                  showToast("Link copied", "success");
-                }}
-              />
-              <MenuItem
-                label="Cancel"
-                onClick={() => setMenuOpen(false)}
-                last
-              />
+              <MenuItem label="Delete" danger onClick={() => { setMenuOpen(false); setConfirmDelete(true); }} />
+              <MenuItem label="Edit" onClick={() => { setMenuOpen(false); router.push(`/p/${id}/edit`); }} />
+              <MenuItem label={saved ? "Remove from saved" : "Add to favourites"} onClick={() => { setMenuOpen(false); toggleSave(); }} />
+              <MenuItem label="Go to post" onClick={() => { setMenuOpen(false); router.push(`/p/${id}`); }} />
+              <MenuItem label="Share to…" onClick={() => { setMenuOpen(false); setShareOpen(true); }} />
+              <MenuItem label="Copy link" onClick={() => { void navigator.clipboard.writeText(`${window.location.origin}/p/${id}`); setMenuOpen(false); showToast("Link copied", "success"); }} />
+              <MenuItem label="Cancel" onClick={() => setMenuOpen(false)} last />
             </>
           ) : (
             <>
-              <MenuItem
-                label="Report"
-                danger
-                onClick={() => {
-                  setMenuOpen(false);
-                  setConfirmReport(true);
-                }}
-              />
-              {following && (
-                <MenuItem
-                  label={`Unfollow @${username}`}
-                  danger
-                  onClick={() => {
-                    setMenuOpen(false);
-                    setConfirmUnfollow(true);
-                  }}
-                />
-              )}
-              {!following && (
-                <MenuItem
-                  label={`Follow @${username}`}
-                  onClick={() => {
-                    setMenuOpen(false);
-                    void toggleFollow();
-                  }}
-                />
-              )}
-              <MenuItem
-                label={saved ? "Remove from saved" : "Add to favourites"}
-                onClick={() => {
-                  setMenuOpen(false);
-                  toggleSave();
-                }}
-              />
-              <MenuItem
-                label="Go to post"
-                onClick={() => {
-                  setMenuOpen(false);
-                  router.push(`/p/${id}`);
-                }}
-              />
-              <MenuItem
-                label="Share to…"
-                onClick={() => {
-                  setMenuOpen(false);
-                  setShareOpen(true);
-                }}
-              />
-              <MenuItem
-                label="Copy link"
-                onClick={() => {
-                  void navigator.clipboard.writeText(
-                    `${window.location.origin}/p/${id}`,
-                  );
-                  setMenuOpen(false);
-                  showToast("Link copied", "success");
-                }}
-              />
+              <MenuItem label="Report" danger onClick={() => { setMenuOpen(false); setConfirmReport(true); }} />
+              {following && <MenuItem label={`Unfollow @${username}`} danger onClick={() => { setMenuOpen(false); setConfirmUnfollow(true); }} />}
+              {!following && <MenuItem label={`Follow @${username}`} onClick={() => { setMenuOpen(false); void toggleFollow(); }} />}
+              <MenuItem label={saved ? "Remove from saved" : "Add to favourites"} onClick={() => { setMenuOpen(false); toggleSave(); }} />
+              <MenuItem label="Go to post" onClick={() => { setMenuOpen(false); router.push(`/p/${id}`); }} />
+              <MenuItem label="Share to…" onClick={() => { setMenuOpen(false); setShareOpen(true); }} />
+              <MenuItem label="Copy link" onClick={() => { void navigator.clipboard.writeText(`${window.location.origin}/p/${id}`); setMenuOpen(false); showToast("Link copied", "success"); }} />
               <MenuItem label="Hide" onClick={hidePost} />
-              <MenuItem
-                label="About this account"
-                onClick={() => {
-                  setMenuOpen(false);
-                  router.push(`/profile/${username}`);
-                }}
-              />
-              <MenuItem
-                label="Cancel"
-                onClick={() => setMenuOpen(false)}
-                last
-              />
+              <MenuItem label="About this account" onClick={() => { setMenuOpen(false); router.push(`/profile/${username}`); }} />
+              <MenuItem label="Cancel" onClick={() => setMenuOpen(false)} last />
             </>
           )}
         </Sheet>
       )}
 
-      {/* ── Delete confirm ── */}
       {confirmDelete && (
         <ConfirmSheet
           title="Delete post?"
@@ -715,7 +546,6 @@ export default function Post({
         />
       )}
 
-      {/* ── Unfollow confirm ── */}
       {confirmUnfollow && (
         <ConfirmSheet
           title={`Unfollow @${username}?`}
@@ -727,55 +557,22 @@ export default function Post({
         />
       )}
 
-      {/* ── Report sheet ── */}
       {confirmReport && (
         <Sheet onClose={() => setConfirmReport(false)}>
-          <p className="text-center text-[17px] font-semibold text-white pt-4 pb-1">
-            Report post
-          </p>
-          <p className="text-center text-[13px] text-[#8e8e8e] pb-4 px-6">
-            Why are you reporting this post?
-          </p>
+          <p className="text-center text-[17px] font-semibold text-white pt-4 pb-1">Report post</p>
+          <p className="text-center text-[13px] text-[#8e8e8e] pb-4 px-6">Why are you reporting this post?</p>
           <div className="h-px bg-[#262626]" />
-          {[
-            "It's spam",
-            "Nudity or sexual activity",
-            "Hate speech or symbols",
-            "Violence or dangerous organizations",
-            "Selling illegal or regulated goods",
-            "Bullying or harassment",
-            "Intellectual property violation",
-            "Suicide or self-injury",
-            "Eating disorders",
-            "Something else",
-          ].map((reason) => (
-            <button
-              key={reason}
-              onClick={doReport}
-              disabled={reportDone}
-              className="w-full px-5 py-3.5 text-left text-[15px] text-white border-b border-[#262626] active:bg-[#2a2a2a] disabled:opacity-60 flex items-center justify-between"
-            >
+          {["It's spam","Nudity or sexual activity","Hate speech or symbols","Violence or dangerous organizations","Selling illegal or regulated goods","Bullying or harassment","Intellectual property violation","Suicide or self-injury","Eating disorders","Something else"].map((reason) => (
+            <button key={reason} onClick={doReport} disabled={reportDone} className="w-full px-5 py-3.5 text-left text-[15px] text-white border-b border-[#262626] active:bg-[#2a2a2a] disabled:opacity-60 flex items-center justify-between">
               <span>{reason}</span>
               {reportDone && <Check size={16} className="text-[#0095f6]" />}
             </button>
           ))}
-          <button
-            onClick={() => setConfirmReport(false)}
-            className="w-full py-4 text-[15px] text-white"
-          >
-            Cancel
-          </button>
+          <button onClick={() => setConfirmReport(false)} className="w-full py-4 text-[15px] text-white">Cancel</button>
         </Sheet>
       )}
 
-      {/* ── Share sheet ── */}
-      {shareOpen && (
-        <ShareSheet
-          postId={id}
-          username={username}
-          onClose={() => setShareOpen(false)}
-        />
-      )}
+      {shareOpen && <ShareSheet postId={id} username={username} onClose={() => setShareOpen(false)} />}
     </>
   );
 }

@@ -1,24 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { Home, Search, Compass, User, PlusSquare } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
+import { Home, Search, Compass, User, PlusSquare, Settings, LogOut } from "lucide-react";
 
 export default function NavBar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { data: session, status } = useSession();
 
   const username = session?.user?.username;
+  const isOwnProfile =
+    !!username && pathname === `/profile/${username}`;
 
   const active = (path: string) =>
-    pathname === path
-      ? "text-white"
-      : "text-neutral-400 hover:text-white";
+    pathname === path ? "text-white" : "text-neutral-400 hover:text-white";
+
+  const handleSignOut = () => signOut({ callbackUrl: "/login" });
 
   return (
     <>
-      {/* MOBILE */}
+      {/* ── Mobile bottom nav ── */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 bg-black/95 backdrop-blur-md border-t border-neutral-800 md:hidden">
         <div className="mx-auto max-w-lg h-14 flex items-center justify-around px-6">
           <Link href="/feed" className={active("/feed")}>
@@ -51,17 +54,14 @@ export default function NavBar() {
         </div>
       </nav>
 
-      <aside className="hidden md:flex fixed top-0 left-0 h-screen z-40 bg-black border-r border-black flex-col justify-between py-8">
-
+      {/* ── Desktop sidebar ── */}
+      <aside className="hidden md:flex fixed top-0 left-0 h-screen z-40 bg-black border-r border-black flex-col py-8">
         <div className="group/sidebar flex flex-col h-full w-20 hover:w-60 transition-[width] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden">
 
-          <div className="px-6 mb-10">
-            {/* <span className="text-white text-xl font-semibold tracking-tight opacity-0 group-hover/sidebar:opacity-100 transition-all duration-500 delay-100 whitespace-nowrap">
-              Frameloop
-            </span> */}
-          </div>
+          {/* Logo spacer */}
+          <div className="px-6 mb-10" />
 
-
+          {/* Main nav */}
           <div className="flex flex-col gap-2 px-3">
 
             <NavItem href="/feed" label="Home" active={active("/feed")}>
@@ -98,6 +98,41 @@ export default function NavBar() {
           </div>
 
           <div className="flex-1" />
+          {/* Bottom actions */}
+          <div className="flex flex-col gap-2 px-3">
+            {isOwnProfile && (
+              <button
+                onClick={() => router.push("/settings")}
+                className="flex items-center gap-5 px-4 py-3 rounded-xl transition-colors duration-200 text-neutral-400 hover:text-white hover:bg-neutral-900/80 w-full"
+                aria-label="Settings"
+              >
+                <div className="min-w-7 flex justify-center">
+                  <Settings size={26} strokeWidth={1.7} />
+                </div>
+                <span className="opacity-0 -translate-x-3 group-hover/sidebar:opacity-100 group-hover/sidebar:translate-x-0 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] delay-75 text-[15px] font-medium tracking-tight whitespace-nowrap">
+                  Settings
+                </span>
+              </button>
+            )}
+            {session ? (
+              <button
+                onClick={handleSignOut}
+                className="flex items-center gap-5 px-4 py-3 rounded-xl transition-colors duration-200 text-neutral-400 hover:text-white hover:bg-neutral-900/80 w-full"
+                aria-label="Sign out"
+              >
+                <div className="min-w-7 flex justify-center">
+                  <LogOut size={26} strokeWidth={1.7} />
+                </div>
+                <span className="opacity-0 -translate-x-3 group-hover/sidebar:opacity-100 group-hover/sidebar:translate-x-0 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] delay-75 text-[15px] font-medium tracking-tight whitespace-nowrap">
+                  Log out
+                </span>
+              </button>
+            ) : (
+              <NavItem href="/login" label="Log in" active={active("/login")}>
+                <LogOut size={26} strokeWidth={1.7} className="rotate-180" />
+              </NavItem>
+            )}
+          </div>
         </div>
       </aside>
     </>
@@ -120,10 +155,7 @@ function NavItem({
       href={href}
       className={`flex items-center gap-5 px-4 py-3 rounded-xl transition-colors duration-200 ${active} hover:bg-neutral-900/80`}
     >
-      {/* Icon */}
-      <div className="min-w-7 flex justify-center">
-        {children}
-      </div>
+      <div className="min-w-7 flex justify-center">{children}</div>
       <span className="opacity-0 -translate-x-3 group-hover/sidebar:opacity-100 group-hover/sidebar:translate-x-0 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] delay-75 text-[15px] font-medium tracking-tight whitespace-nowrap">
         {label}
       </span>
