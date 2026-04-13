@@ -1,4 +1,4 @@
-<h1 align="center">Frameloop</h1>
+<h1 align="center">Frameloops</h1>
 
 <!-- <p align="left">
 A scalable fullstack social media application built with Next.js and NestJS, featuring authentication, posts, stories, and a modular API-driven architecture.
