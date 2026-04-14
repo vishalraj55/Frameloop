@@ -15,7 +15,7 @@ interface PostType {
     avatarUrl?: string;
     isFollowing?: boolean;
   };
-  likes: { id: string }[];
+  likes: { id: string; userId: string }[];
   createdAt?: string;
 }
 
@@ -141,12 +141,13 @@ export default function FeedPage() {
   );
 
   useEffect(() => {
+    if (session === undefined) return;
     const load = async () => {
       await fetchPosts(undefined, true);
       setInitialLoading(false);
     };
     void load();
-  }, [fetchPosts]);
+  }, [fetchPosts, session]);
 
   useEffect(() => {
     if (!sentinelRef.current) return;
@@ -256,6 +257,9 @@ export default function FeedPage() {
                   imageUrl={post.imageUrl}
                   caption={post.caption ?? ""}
                   likes={post.likes.length}
+                  isLiked={post.likes.some(
+                    (l) => l.userId === session?.user?.id,
+                  )}
                   createdAt={post.createdAt ?? ""}
                   isFollowing={post.author.isFollowing ?? false}
                   priority={index === 0}

@@ -250,7 +250,7 @@ export default function Post({
 
   /* ── State ── */
   const [liked, setLiked] = useState(initialIsLiked);
-  const [likeCount, setLikeCount] = useState(likes);
+  const [likeCount, setLikeCount] = useState(likes ?? 0);
   const [likeLoading, setLikeLoading] = useState(false);
 
   const [saved, setSaved] = useState(() => getStored("savedPosts").includes(id));
@@ -486,7 +486,7 @@ export default function Post({
 
         {/* ── Likes ── */}
         <div className="px-3 text-sm font-semibold text-white">
-          {likeCount.toLocaleString()} likes
+          {(likeCount ?? 0).toLocaleString()} likes
         </div>
 
         {/* ── Caption ── */}

@@ -1,61 +1,51 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 
-type Params = { params: { id: string } };
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
-/* -- toggle like -- */
+type Params = { params: Promise<{ id: string }> };
+
+interface Like {
+  id: string;
+  userId: string;
+  postId: string;
+}
+
+interface Post {
+  likes: Like[];
+}
+
 export async function POST(req: NextRequest, { params }: Params) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  const postId = params.id;
-  const userId = session.user.id;
-
-  // Check if post exists
-  const post = await prisma.post.findUnique({ where: { id: postId } });
-  if (!post) {
-    return NextResponse.json({ message: "Post not found" }, { status: 404 });
-  }
-
-  // Check if already liked
-  const existing = await prisma.like.findUnique({
-    where: { userId_postId: { userId, postId } },
+  const res = await fetch(`${BACKEND_URL}/posts/${id}/like`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId: session.user.id }),
   });
 
-  if (existing) {
-    // Unlike
-    await prisma.like.delete({
-      where: { userId_postId: { userId, postId } },
-    });
-    const count = await prisma.like.count({ where: { postId } });
-    return NextResponse.json({ liked: false, count });
-  } else {
-    // Like
-    await prisma.like.create({ data: { userId, postId } });
-    const count = await prisma.like.count({ where: { postId } });
-    return NextResponse.json({ liked: true, count });
-  }
+  const data = await res.json();
+  return NextResponse.json(data, { status: res.status });
 }
-
-/* ── GET /api/posts/[id]/like — get like status + count ── */
 export async function GET(req: NextRequest, { params }: Params) {
+  const { id } = await params;
   const session = await getServerSession(authOptions);
-  const postId = params.id;
-  const userId = session?.user?.id;
 
-  const count = await prisma.like.count({ where: { postId } });
-
-  if (!userId) {
-    return NextResponse.json({ liked: false, count });
-  }
-
-  const existing = await prisma.like.findUnique({
-    where: { userId_postId: { userId, postId } },
+  const res = await fetch(`${BACKEND_URL}/posts/${id}`, {
+    method: "GET",
+    headers: { "Content-Type": "application/json" },
   });
 
-  return NextResponse.json({ liked: !!existing, count });
+  const post: Post = await res.json();
+  const count = post?.likes?.length ?? 0;
+  const liked = session?.user?.id
+    ? post?.likes?.some((l: Like) => l.userId === session.user.id)
+    : false;
+
+  return NextResponse.json({ liked, count });
 }

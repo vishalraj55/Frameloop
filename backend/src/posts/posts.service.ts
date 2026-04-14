@@ -53,11 +53,13 @@ export class PostsService {
 
     if (existing) {
       await this.prisma.like.delete({ where: { id: existing.id } });
-      return { liked: false };
+      const count = await this.prisma.like.count({ where: { postId } });
+      return { liked: false, count };
     }
 
     await this.prisma.like.create({ data: { postId, userId } });
-    return { liked: true };
+    const count = await this.prisma.like.count({ where: { postId } });
+    return { liked: true, count };
   }
 
   async delete(id: string) {
