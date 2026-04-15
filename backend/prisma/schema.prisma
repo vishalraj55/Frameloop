@@ -17,6 +17,8 @@ model User {
   likes     Like[]
   stories   Story[]
   comments  Comment[]
+  commentLikes   CommentLike[]
+  commentReports CommentReport[]
   createdAt DateTime  @default(now())
   following Follow[]  @relation("following")
   followers Follow[]  @relation("followers")
@@ -55,13 +57,39 @@ model Like {
 }
 
 model Comment {
-  id        String   @id @default(uuid())
+  id        String   @id @default(cuid())
   text      String
+  createdAt DateTime @default(now())
   postId    String
   authorId  String
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  author    User     @relation(fields: [authorId], references: [id])
+  parentId  String?
+
+  post    Post     @relation(fields: [postId], references: [id])
+  author  User     @relation(fields: [authorId], references: [id])
+  parent  Comment? @relation("Replies", fields: [parentId], references: [id])
+  replies Comment[] @relation("Replies")
+
+  likes   CommentLike[]
+  reports CommentReport[]
+}
+
+model CommentLike {
+  commentId String
+  userId    String
+  comment   Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User    @relation(fields: [userId], references: [id])
+
+  @@unique([commentId, userId])
+}
+
+model CommentReport {
+  id        String   @id @default(cuid())
+  commentId String
+  userId    String
+  reason    String
   createdAt DateTime @default(now())
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 model Story {
