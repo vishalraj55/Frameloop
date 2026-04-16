@@ -22,6 +22,7 @@ model User {
   createdAt DateTime  @default(now())
   following Follow[]  @relation("following")
   followers Follow[]  @relation("followers")
+  storyViews     StoryView[]
 }
 
 model Post {
@@ -98,5 +99,17 @@ model Story {
   authorId  String
   author    User     @relation(fields: [authorId], references: [id])
   expiresAt DateTime
+  createdAt DateTime    @default(now())
+  views     StoryView[]
+}
+
+model StoryView {
+  id        String   @id @default(dbgenerated("gen_random_uuid()"))
+  storyId   String
+  viewerId  String
   createdAt DateTime @default(now())
+  story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  viewer    User     @relation(fields: [viewerId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([storyId, viewerId])
 }

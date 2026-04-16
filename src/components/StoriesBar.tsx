@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import Image from 'next/image';
-import Link from 'next/link';
-import { useEffect, useState, useSyncExternalStore, useRef } from 'react';
-import { useSession } from 'next-auth/react';
-import { Plus } from 'lucide-react';
+import Image from "next/image";
+import Link from "next/link";
+import { useEffect, useState, useSyncExternalStore, useRef } from "react";
+import { useSession } from "next-auth/react";
+import { Plus } from "lucide-react";
 
 interface StoryType {
   id: string;
@@ -16,8 +16,8 @@ interface StoryType {
 }
 
 function subscribeToStorage(cb: () => void) {
-  window.addEventListener('storage', cb);
-  return () => window.removeEventListener('storage', cb);
+  window.addEventListener("storage", cb);
+  return () => window.removeEventListener("storage", cb);
 }
 
 const emptyArray: string[] = [];
@@ -38,33 +38,33 @@ async function compressImage(file: File): Promise<Blob> {
         width = Math.round((width * MAX) / height);
         height = MAX;
       }
-      const canvas = document.createElement('canvas');
+      const canvas = document.createElement("canvas");
       canvas.width = width;
       canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return reject(new Error('Canvas not supported'));
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return reject(new Error("Canvas not supported"));
       ctx.drawImage(img, 0, 0, width, height);
       canvas.toBlob(
         (blob) => {
-          if (!blob) return reject(new Error('Compression failed'));
+          if (!blob) return reject(new Error("Compression failed"));
           resolve(blob);
         },
-        'image/jpeg',
+        "image/jpeg",
         0.82,
       );
     };
 
-    img.onerror = () => reject(new Error('Image load failed'));
+    img.onerror = () => reject(new Error("Image load failed"));
     img.src = url;
   });
 }
 
 async function compressVideo(file: File): Promise<Blob> {
   return new Promise((resolve, reject) => {
-    const video = document.createElement('video');
+    const video = document.createElement("video");
     const url = URL.createObjectURL(file);
     video.src = url;
-    video.muted = true;
+    video.muted = false;
     video.playsInline = true;
 
     video.onloadedmetadata = () => {
@@ -78,20 +78,36 @@ async function compressVideo(file: File): Promise<Blob> {
         h = MAX;
       }
 
-      const canvas = document.createElement('canvas');
+      const canvas = document.createElement("canvas");
       canvas.width = w;
       canvas.height = h;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return reject(new Error('Canvas not supported'));
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return reject(new Error("Canvas not supported"));
 
-      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-        ? 'video/webm;codecs=vp9'
-        : MediaRecorder.isTypeSupported('video/webm;codecs=vp8')
-          ? 'video/webm;codecs=vp8'
-          : 'video/webm';
+      const audioCtx = new AudioContext();
+      const source = audioCtx.createMediaElementSource(video);
+      const audioDestination = audioCtx.createMediaStreamDestination();
+      source.connect(audioDestination);
+      // source.connect(audioCtx.destination);
 
-      const stream = canvas.captureStream(30);
-      const recorder = new MediaRecorder(stream, {
+      const videoStream = canvas.captureStream(30);
+      const audioStream = audioDestination.stream;
+
+      // Combine video + audio tracks
+      const combinedStream = new MediaStream([
+        ...videoStream.getVideoTracks(),
+        ...audioStream.getAudioTracks(),
+      ]);
+
+      const mimeType = MediaRecorder.isTypeSupported(
+        "video/webm;codecs=vp9,opus",
+      )
+        ? "video/webm;codecs=vp9,opus"
+        : MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")
+          ? "video/webm;codecs=vp8,opus"
+          : "video/webm";
+
+      const recorder = new MediaRecorder(combinedStream, {
         mimeType,
         videoBitsPerSecond: 1_500_000,
       });
@@ -102,9 +118,10 @@ async function compressVideo(file: File): Promise<Blob> {
       };
       recorder.onstop = () => {
         URL.revokeObjectURL(url);
+        void audioCtx.close();
         resolve(new Blob(chunks, { type: mimeType }));
       };
-      recorder.onerror = () => reject(new Error('Video compression failed'));
+      recorder.onerror = () => reject(new Error("Video compression failed"));
 
       let animFrame: number;
       const drawFrame = () => {
@@ -122,14 +139,14 @@ async function compressVideo(file: File): Promise<Blob> {
       };
 
       setTimeout(() => {
-        if (recorder.state === 'recording') {
+        if (recorder.state === "recording") {
           cancelAnimationFrame(animFrame);
           recorder.stop();
         }
       }, 60_000);
     };
 
-    video.onerror = () => reject(new Error('Video load failed'));
+    video.onerror = () => reject(new Error("Video load failed"));
   });
 }
 
@@ -139,14 +156,14 @@ export default function StoriesBar() {
 
   const [stories, setStories] = useState<StoryType[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [uploadLabel, setUploadLabel] = useState('Your story');
+  const [uploadLabel, setUploadLabel] = useState("Your story");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cacheRef = useRef<{ raw: string; parsed: string[] } | null>(null);
 
   const seenStories = useSyncExternalStore(
     subscribeToStorage,
     () => {
-      const raw = localStorage.getItem('seenStories') ?? '[]';
+      const raw = localStorage.getItem("seenStories") ?? "[]";
       if (cacheRef.current?.raw === raw) return cacheRef.current.parsed;
       const parsed = JSON.parse(raw) as string[];
       cacheRef.current = { raw, parsed };
@@ -155,38 +172,38 @@ export default function StoriesBar() {
     () => emptyArray,
   );
 
+  const fetchStories = async () => {
+    try {
+      const headers: HeadersInit = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/stories`, {
+        headers,
+      });
+      const data = (await res.json()) as StoryType[];
+      setStories(data);
+    } catch (err) {
+      console.error("Failed to fetch stories:", err);
+    }
+  };
+
   useEffect(() => {
-    if (status === 'loading') return;
+    if (status === "loading") return;
 
     const fetchStories = async () => {
       try {
         const headers: HeadersInit = {};
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-
+        if (token) headers["Authorization"] = `Bearer ${token}`;
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/stories`, {
           headers,
         });
         const data = (await res.json()) as StoryType[];
         setStories(data);
       } catch (err) {
-        console.error('Failed to fetch stories:', err);
+        console.error("Failed to fetch stories:", err);
       }
     };
-
     void fetchStories();
   }, [token, status]);
-
-  const fetchStories = async () => {
-    try {
-      const headers: HeadersInit = {};
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/stories`, { headers });
-      const data = (await res.json()) as StoryType[];
-      setStories(data);
-    } catch (err) {
-      console.error('Failed to fetch stories:', err);
-    }
-  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -194,15 +211,15 @@ export default function StoriesBar() {
 
     const authorId = session?.user?.id;
     if (!authorId) {
-      alert('You must be logged in to post a story.');
+      alert("You must be logged in to post a story.");
       return;
     }
 
-    const isVideo = file.type.startsWith('video/');
-    const isImage = file.type.startsWith('image/');
+    const isVideo = file.type.startsWith("video/");
+    const isImage = file.type.startsWith("image/");
 
     if (!isImage && !isVideo) {
-      alert('Only images and videos are supported.');
+      alert("Only images and videos are supported.");
       return;
     }
 
@@ -211,39 +228,39 @@ export default function StoriesBar() {
 
       let compressed: Blob;
       if (isImage) {
-        setUploadLabel('Compressing...');
+        setUploadLabel("Compressing...");
         compressed = await compressImage(file);
       } else {
-        setUploadLabel('Processing...');
+        setUploadLabel("Processing...");
         compressed = await compressVideo(file);
       }
 
-      setUploadLabel('Uploading...');
+      setUploadLabel("Uploading...");
 
-      const ext = isImage ? 'jpg' : 'webm';
+      const ext = isImage ? "jpg" : "webm";
       const compressedFile = new File([compressed], `story.${ext}`, {
-        type: compressed.type,
+        type: isImage ? "image/jpeg" : "video/webm", 
       });
 
       const form = new FormData();
-      form.append('image', compressedFile);
-      form.append('authorId', authorId);
+      form.append("image", compressedFile);
+      form.append("authorId", authorId);
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/stories`, {
-        method: 'POST',
+        method: "POST",
         body: form,
       });
 
-      if (!res.ok) throw new Error('Upload failed');
+      if (!res.ok) throw new Error("Upload failed");
 
       await fetchStories();
     } catch (err) {
-      console.error('Story upload failed:', err);
-      alert('Failed to upload story. Please try again.');
+      console.error("Story upload failed:", err);
+      alert("Failed to upload story. Please try again.");
     } finally {
       setUploading(false);
-      setUploadLabel('Your story');
-      e.target.value = '';
+      setUploadLabel("Your story");
+      e.target.value = "";
     }
   };
 
@@ -290,8 +307,8 @@ export default function StoriesBar() {
               <div
                 className={`p-0.5 rounded-full ${
                   isSeen
-                    ? 'bg-[#262626]'
-                    : 'bg-linear-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888]'
+                    ? "bg-[#262626]"
+                    : "bg-linear-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888]"
                 }`}
               >
                 <div className="p-0.5 rounded-full bg-black">
@@ -313,7 +330,7 @@ export default function StoriesBar() {
               </div>
               <span
                 className={`text-[11px] w-full text-center truncate ${
-                  isSeen ? 'text-[#8e8e8e]' : 'text-white'
+                  isSeen ? "text-[#8e8e8e]" : "text-white"
                 }`}
               >
                 {story.author.username}

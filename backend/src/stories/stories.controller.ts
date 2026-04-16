@@ -16,6 +16,7 @@ import { Readable } from 'stream';
 import { v2 as cloudinary } from 'cloudinary';
 import { StoriesService } from './stories.service';
 import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { AuthRequest } from '../auth/jwt-auth.guard';
 
 @Controller('stories')
@@ -29,8 +30,21 @@ export class StoriesController {
   }
 
   @Get(':username')
-  getByUsername(@Param('username') username: string) {
-    return this.storiesService.getStoriesByUsername(username);
+  @UseGuards(OptionalJwtAuthGuard)
+  getByUsername(@Param('username') username: string, @Req() req: AuthRequest) {
+    return this.storiesService.getStoriesByUsername(username, req.user?.id);
+  }
+
+  @Post(':id/view')
+  @UseGuards(JwtAuthGuard)
+  recordView(@Param('id') storyId: string, @Req() req: AuthRequest) {
+    return this.storiesService.recordView(storyId, req.user!.id);
+  }
+
+  @Get(':id/views')
+  @UseGuards(JwtAuthGuard)
+  getViews(@Param('id') storyId: string, @Req() req: AuthRequest) {
+    return this.storiesService.getViews(storyId, req.user!.id);
   }
 
   @Post()
