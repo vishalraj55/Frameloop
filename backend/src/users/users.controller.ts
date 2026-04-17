@@ -53,7 +53,19 @@ export class UsersController {
     @Param('username') username: string,
     @Req() req: AuthRequest,
     @UploadedFile() file?: Express.Multer.File,
-    @Body() body?: { bio?: string; username?: string },
+    @Body()
+    body?: {
+      bio?: string;
+      username?: string;
+      fullName?: string;
+      website?: string;
+      pronouns?: string;
+      gender?: string;
+      isPrivate?: string;
+      showActivityStatus?: string;
+      allowStoryResharing?: string;
+      links?: string;
+    },
   ) {
     if (!req.user || req.user.username !== username) {
       throw new ForbiddenException("Cannot edit another user's profile");
@@ -72,7 +84,6 @@ export class UsersController {
             resolve(result.secure_url);
           },
         );
-
         Readable.from(file.buffer).pipe(upload);
       });
     }
@@ -81,6 +92,23 @@ export class UsersController {
       bio: body?.bio,
       avatarUrl,
       newUsername: body?.username,
+      fullName: body?.fullName,
+      website: body?.website,
+      pronouns: body?.pronouns,
+      gender: body?.gender,
+      isPrivate:
+        body?.isPrivate !== undefined ? body.isPrivate === 'true' : undefined,
+      showActivityStatus:
+        body?.showActivityStatus !== undefined
+          ? body.showActivityStatus === 'true'
+          : undefined,
+      allowStoryResharing:
+        body?.allowStoryResharing !== undefined
+          ? body.allowStoryResharing === 'true'
+          : undefined,
+      links: body?.links
+        ? (JSON.parse(body.links) as { title: string; url: string }[])
+        : undefined,
     });
   }
 
@@ -90,7 +118,6 @@ export class UsersController {
     if (!req.user) {
       throw new ForbiddenException();
     }
-
     return this.usersService.followUser(username, req.user.id);
   }
 
@@ -100,7 +127,6 @@ export class UsersController {
     if (!req.user) {
       throw new ForbiddenException();
     }
-
     return this.usersService.unfollowUser(username, req.user.id);
   }
 

@@ -13,6 +13,14 @@ model User {
   password  String
   avatarUrl String?
   bio       String?
+  fullName            String?
+  website             String?
+  pronouns            String?
+  gender              String?
+  isPrivate           Boolean   @default(false)
+  showActivityStatus  Boolean   @default(true)
+  allowStoryResharing Boolean   @default(true)
+  links               Json      @default("[]")
   posts     Post[]
   likes     Like[]
   stories   Story[]

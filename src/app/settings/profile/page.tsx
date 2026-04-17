@@ -51,13 +51,7 @@ const GENDER_OPTIONS = [
   "Custom",
 ];
 
-type SheetType =
-  | null
-  | "pronouns"
-  | "gender"
-  | "links"
-  | "addLink"
-  | "privacy";
+type SheetType = null | "pronouns" | "gender" | "links" | "addLink" | "privacy";
 
 export default function EditProfilePage() {
   const { data: session, update, status } = useSession();
@@ -155,7 +149,10 @@ export default function EditProfilePage() {
       formData.append("bio", form.bio);
       formData.append("website", form.website);
       formData.append("pronouns", form.pronouns);
-      formData.append("gender", form.gender === "Custom" ? form.customGender : form.gender);
+      formData.append(
+        "gender",
+        form.gender === "Custom" ? form.customGender : form.gender,
+      );
       formData.append("isPrivate", String(form.isPrivate));
       formData.append("showActivityStatus", String(form.showActivityStatus));
       formData.append("allowStoryResharing", String(form.allowStoryResharing));
@@ -164,6 +161,9 @@ export default function EditProfilePage() {
 
       const res = await fetch(`/api/users/${session?.user?.username}`, {
         method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${session?.user?.token}`,
+        },
         body: formData,
       });
 
@@ -178,7 +178,7 @@ export default function EditProfilePage() {
       setTimeout(() => router.push(`/profile/${form.username}`), 1200);
     } catch (err) {
       console.error(err);
-      setError("Something went wrong.");
+      setError(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
       setSaving(false);
     }
@@ -235,32 +235,6 @@ export default function EditProfilePage() {
 
   /* ─── Section divider ─── */
   const Divider = () => <div className="h-px bg-[#262626] mx-4" />;
-
-  /* ─── Row ─── */
-  const Row = ({
-    label,
-    value,
-    onClick,
-    right,
-  }: {
-    label: string;
-    value?: string;
-    onClick?: () => void;
-    right?: React.ReactNode;
-  }) => (
-    <button
-      onClick={onClick}
-      disabled={!onClick}
-      className="w-full flex items-center justify-between px-4 py-3.5 text-left active:bg-[#2a2a2a] transition-colors"
-    >
-      <span className="text-[15px] text-white">{label}</span>
-      <span className="flex items-center gap-2">
-        {value && <span className="text-[14px] text-[#8e8e8e]">{value}</span>}
-        {right}
-        {onClick && <ChevronRight size={16} className="text-[#4e4e4e]" />}
-      </span>
-    </button>
-  );
 
   /* ─── Section header ─── */
   const SectionHeader = ({ title }: { title: string }) => (
@@ -495,7 +469,11 @@ export default function EditProfilePage() {
           <div className="text-left">
             <p className="text-[15px] text-white">Gender</p>
             <p className="text-[13px] text-[#8e8e8e] mt-0.5">
-              {form.gender === "Prefer not to say" ? "Not specified" : form.gender === "Custom" ? form.customGender || "Custom" : form.gender}
+              {form.gender === "Prefer not to say"
+                ? "Not specified"
+                : form.gender === "Custom"
+                  ? form.customGender || "Custom"
+                  : form.gender}
             </p>
           </div>
           <ChevronRight size={16} className="text-[#4e4e4e]" />

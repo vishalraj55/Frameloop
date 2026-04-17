@@ -38,7 +38,7 @@ export class StoriesService {
     });
   }
 
-  getStoriesByUsername(username: string, currentUserId?: string) {
+  getStoriesByUsername(username: string) {
     return this.prisma.story.findMany({
       where: {
         expiresAt: { gt: new Date() },

@@ -31,20 +31,20 @@ export class StoriesController {
 
   @Get(':username')
   @UseGuards(OptionalJwtAuthGuard)
-  getByUsername(@Param('username') username: string, @Req() req: AuthRequest) {
-    return this.storiesService.getStoriesByUsername(username, req.user?.id);
+  getByUsername(@Param('username') username: string) {
+    return this.storiesService.getStoriesByUsername(username);
   }
 
   @Post(':id/view')
   @UseGuards(JwtAuthGuard)
   recordView(@Param('id') storyId: string, @Req() req: AuthRequest) {
-    return this.storiesService.recordView(storyId, req.user!.id);
+    return this.storiesService.recordView(storyId, req.user.id);
   }
 
   @Get(':id/views')
   @UseGuards(JwtAuthGuard)
   getViews(@Param('id') storyId: string, @Req() req: AuthRequest) {
-    return this.storiesService.getViews(storyId, req.user!.id);
+    return this.storiesService.getViews(storyId, req.user.id);
   }
 
   @Post()

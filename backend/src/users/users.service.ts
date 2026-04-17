@@ -28,6 +28,14 @@ export class UsersService {
         email: true,
         avatarUrl: true,
         bio: true,
+        fullName: true,
+        website: true,
+        pronouns: true,
+        gender: true,
+        isPrivate: true,
+        showActivityStatus: true,
+        allowStoryResharing: true,
+        links: true,
         createdAt: true,
         posts: {
           select: {
@@ -72,7 +80,19 @@ export class UsersService {
 
   async updateProfile(
     username: string,
-    data: { bio?: string; avatarUrl?: string; newUsername?: string },
+    data: {
+      bio?: string;
+      avatarUrl?: string;
+      newUsername?: string;
+      fullName?: string;
+      website?: string;
+      pronouns?: string;
+      gender?: string;
+      isPrivate?: boolean;
+      showActivityStatus?: boolean;
+      allowStoryResharing?: boolean;
+      links?: { title: string; url: string }[];
+    },
   ) {
     const user = await this.prisma.user.findUnique({ where: { username } });
     if (!user) throw new NotFoundException('User not found');
@@ -83,12 +103,33 @@ export class UsersService {
         ...(data.bio !== undefined && { bio: data.bio }),
         ...(data.avatarUrl && { avatarUrl: data.avatarUrl }),
         ...(data.newUsername && { username: data.newUsername }),
+        ...(data.fullName !== undefined && { fullName: data.fullName }),
+        ...(data.website !== undefined && { website: data.website }),
+        ...(data.pronouns !== undefined && { pronouns: data.pronouns }),
+        ...(data.gender !== undefined && { gender: data.gender }),
+        ...(data.isPrivate !== undefined && { isPrivate: data.isPrivate }),
+        ...(data.showActivityStatus !== undefined && {
+          showActivityStatus: data.showActivityStatus,
+        }),
+        ...(data.allowStoryResharing !== undefined && {
+          allowStoryResharing: data.allowStoryResharing,
+        }),
+        ...(data.links !== undefined && {
+          links: { deleteMany: {}, create: data.links },
+        }),
       },
       select: {
         id: true,
         username: true,
         avatarUrl: true,
         bio: true,
+        fullName: true,
+        website: true,
+        pronouns: true,
+        gender: true,
+        isPrivate: true,
+        showActivityStatus: true,
+        allowStoryResharing: true,
       },
     });
   }
