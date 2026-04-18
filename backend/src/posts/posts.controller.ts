@@ -6,8 +6,10 @@ import {
   Body,
   Param,
   Query,
+  Req,
   UploadedFile,
   UseInterceptors,
+  UseGuards,
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -16,14 +18,26 @@ import { Readable } from 'stream';
 import { v2 as cloudinary } from 'cloudinary';
 import { PostsService } from './posts.service';
 import { LikeDto } from './dto/like.dto';
+import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
+import type { Request } from 'express';
 
 @Controller('posts')
 export class PostsController {
   constructor(private postsService: PostsService) {}
 
   @Get()
-  getFeed(@Query('cursor') cursor?: string, @Query('limit') limit?: string) {
-    return this.postsService.getFeed(cursor, limit ? parseInt(limit, 10) : 10);
+  @UseGuards(OptionalJwtAuthGuard)
+  getFeed(
+    @Query('cursor') cursor?: string,
+    @Query('limit') limit?: string,
+    @Req() req?: Request & { user?: { id: string } },
+  ) {
+    const viewerId = req?.user?.id;
+    return this.postsService.getFeed(
+      cursor,
+      limit ? parseInt(limit, 10) : 10,
+      viewerId,
+    );
   }
 
   @Get(':id')

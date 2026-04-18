@@ -11,7 +11,7 @@ const authorSelect = {
 export class PostsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getFeed(cursor?: string, limit = 10) {
+  async getFeed(cursor?: string, limit = 10, viewerId?: string) {
     const posts = await this.prisma.post.findMany({
       take: limit,
       ...(cursor && {
@@ -25,7 +25,27 @@ export class PostsService {
       orderBy: { createdAt: 'desc' },
     });
 
-    return posts;
+    if (!viewerId) return posts;
+
+    const authorIds = [...new Set(posts.map((p) => p.author.id))];
+
+    const followings = await this.prisma.follow.findMany({
+      where: {
+        followerId: viewerId,
+        followingId: { in: authorIds },
+      },
+      select: { followingId: true },
+    });
+
+    const followingSet = new Set(followings.map((f) => f.followingId));
+
+    return posts.map((post) => ({
+      ...post,
+      author: {
+        ...post.author,
+        isFollowing: followingSet.has(post.author.id),
+      },
+    }));
   }
 
   async findOne(id: string) {

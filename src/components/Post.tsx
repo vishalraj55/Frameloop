@@ -248,7 +248,6 @@ export default function Post({
   const lastTapRef = useRef(0);
   const isOwner = session?.user?.username === username;
 
-  /* ── State ── */
   const [liked, setLiked] = useState(initialIsLiked);
   const [likeCount, setLikeCount] = useState(likes ?? 0);
   const [likeLoading, setLikeLoading] = useState(false);
@@ -272,16 +271,12 @@ export default function Post({
     setTimeout(() => setToast({ msg: "", type: null }), 2500);
   }
 
-  /* ── Like (hits API, saves to DB) ── */
   async function toggleLike() {
     if (likeLoading) return;
-
-    // Optimistic update
     const wasLiked = liked;
     setLiked(!wasLiked);
     setLikeCount((p) => (wasLiked ? p - 1 : p + 1));
     setLikeLoading(true);
-
     try {
       const res = await fetch(`/api/posts/${id}/like`, { method: "POST" });
       if (!res.ok) throw new Error();
@@ -289,7 +284,6 @@ export default function Post({
       setLiked(data.liked);
       setLikeCount(data.count);
     } catch {
-      // Revert on failure
       setLiked(wasLiked);
       setLikeCount((p) => (wasLiked ? p + 1 : p - 1));
       showToast("Failed to like. Try again.", "error");
@@ -298,7 +292,6 @@ export default function Post({
     }
   }
 
-  /* ── Follow / Unfollow ── */
   async function toggleFollow() {
     if (!session?.user?.id || followLoading) return;
     const wasFollowing = following;
@@ -307,7 +300,10 @@ export default function Post({
     try {
       const res = await fetch(`/api/users/${username}/follow`, {
         method: wasFollowing ? "DELETE" : "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.user.token}`,
+        },
         body: JSON.stringify({ followerId: session.user.id }),
       });
       if (!res.ok) throw new Error();
@@ -423,21 +419,16 @@ export default function Post({
           </Link>
 
           <div className="flex items-center gap-2">
-            {!isOwner && session?.user && (
-              <>
-                {following && (
-                  <span className="text-[#8e8e8e] text-[13px] select-none">•</span>
-                )}
-                <button
-                  onClick={() => void toggleFollow()}
-                  disabled={followLoading}
-                  className={`text-[13px] font-semibold transition-opacity ${
-                    followLoading ? "opacity-50" : "active:opacity-60"
-                  } ${following ? "text-[#8e8e8e]" : "text-[#0095f6]"}`}
-                >
-                  {following ? "Following" : "Follow"}
-                </button>
-              </>
+            {!isOwner && session?.user && !following && (
+              <button
+                onClick={() => void toggleFollow()}
+                disabled={followLoading}
+                className={`text-[13px] font-semibold text-[#0095f6] transition-opacity ${
+                  followLoading ? "opacity-50" : "active:opacity-60"
+                }`}
+              >
+                {followLoading ? "Following..." : "Follow"}
+              </button>
             )}
             <button onClick={() => setMenuOpen(true)} className="p-1.5 -mr-1 active:opacity-60">
               <MoreHorizontal size={20} className="text-white" />
@@ -445,7 +436,7 @@ export default function Post({
           </div>
         </div>
 
-        {/* ── Image ── */}
+        {/*  Image  */}
         <div className="relative" onClick={handleDoubleTap}>
           <Image
             src={imageUrl}
@@ -459,7 +450,7 @@ export default function Post({
           <HeartBurst show={heartBurst} />
         </div>
 
-        {/* ── Action bar ── */}
+        {/* Action bar  */}
         <div className="flex items-center px-3 py-2 gap-4">
           <button
             onClick={() => void toggleLike()}
@@ -484,12 +475,12 @@ export default function Post({
           </button>
         </div>
 
-        {/* ── Likes ── */}
+        {/* Likes  */}
         <div className="px-3 text-sm font-semibold text-white">
           {(likeCount ?? 0).toLocaleString()} likes
         </div>
 
-        {/* ── Caption ── */}
+        {/* Caption */}
         {caption && (
           <div className="px-3 py-1 text-sm text-white">
             <span className="font-semibold">{username}</span>{" "}
@@ -497,7 +488,7 @@ export default function Post({
           </div>
         )}
 
-        {/* ── Time ── */}
+        {/* Time */}
         <div className="px-3 pb-3 text-[11px] text-zinc-500 tracking-wide mt-1">
           {getRelativeTime(createdAt)}
         </div>
@@ -505,7 +496,7 @@ export default function Post({
         <CommentSheet postId={id} open={commentOpen} onClose={() => setCommentOpen(false)} />
       </article>
 
-      {/* ── Three-dot menu ── */}
+      {/* Three-dot menu */}
       {menuOpen && (
         <Sheet onClose={() => setMenuOpen(false)}>
           {isOwner ? (

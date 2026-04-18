@@ -14,19 +14,29 @@ export default function TopBar() {
   const router = useRouter();
   const { username } = useParams<Params>();
 
+  const isFollowPage = useMemo(
+    () => pathname?.includes("/followers") || pathname?.includes("/following"),
+    [pathname]
+  );
+
   const isProfile = useMemo(
-    () => pathname?.startsWith("/profile/") && !!username,
+    () =>
+      (pathname?.startsWith("/profile/") || pathname?.startsWith("/users/")) &&
+      !!username,
     [pathname, username]
   );
+
   const isOwnProfile = useMemo(
     () => isProfile && data?.user?.username === username,
     [isProfile, data?.user?.username, username]
   );
 
-  const title = useMemo(
-    () => (isProfile ? username : "Frameloop"),
-    [isProfile, username]
-  );
+  const title = useMemo(() => {
+    if (!isProfile) return "Frameloop";
+    if (pathname?.includes("/followers")) return `${username}'s followers`;
+    if (pathname?.includes("/following")) return `${username}'s following`;
+    return username;
+  }, [isProfile, pathname, username]);
 
   const font = useMemo(
     () =>
@@ -40,6 +50,7 @@ export default function TopBar() {
     () => signOut({ callbackUrl: "/login" }),
     []
   );
+  if (isFollowPage) return null;
 
   return (
     <>
