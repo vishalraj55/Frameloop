@@ -24,21 +24,24 @@ const PAGE_SIZE = 10;
 
 function PostSkeleton() {
   return (
-    <div className="border-b border-neutral-900 pb-4 mb-2 animate-pulse">
+    <div className="border-b border-[#1a1a1a] pb-4 mb-1 animate-pulse">
       <div className="flex items-center gap-3 px-4 py-3">
-        <div className="w-8 h-8 rounded-full bg-neutral-800" />
-        <div className="h-3 w-28 rounded bg-neutral-800" />
+        <div className="w-9 h-9 rounded-full bg-[#1e1e1e] shrink-0" />
+        <div className="flex flex-col gap-1.5 flex-1">
+          <div className="h-2.5 w-24 rounded-full bg-[#1e1e1e]" />
+          <div className="h-2 w-16 rounded-full bg-[#181818]" />
+        </div>
       </div>
-      <div className="w-full aspect-square bg-neutral-800" />
-      <div className="px-4 pt-3 flex gap-4">
-        <div className="h-6 w-6 rounded bg-neutral-800" />
-        <div className="h-6 w-6 rounded bg-neutral-800" />
-        <div className="h-6 w-6 rounded bg-neutral-800" />
+      <div className="w-full aspect-square bg-[#141414]" />
+      <div className="px-4 pt-3 flex items-center gap-4">
+        <div className="h-5 w-5 rounded-full bg-[#1e1e1e]" />
+        <div className="h-5 w-5 rounded-full bg-[#1e1e1e]" />
+        <div className="h-5 w-5 rounded-full bg-[#1e1e1e]" />
       </div>
-      <div className="px-4 pt-2 flex flex-col gap-2">
-        <div className="h-3 w-16 rounded bg-neutral-800" />
-        <div className="h-3 w-3/4 rounded bg-neutral-800" />
-        <div className="h-3 w-1/2 rounded bg-neutral-800" />
+      <div className="px-4 pt-3 flex flex-col gap-2">
+        <div className="h-2.5 w-20 rounded-full bg-[#1e1e1e]" />
+        <div className="h-2.5 w-4/5 rounded-full bg-[#181818]" />
+        <div className="h-2.5 w-1/2 rounded-full bg-[#161616]" />
       </div>
     </div>
   );
@@ -47,11 +50,13 @@ function PostSkeleton() {
 function FeedSkeleton() {
   return (
     <>
-      <div className="flex gap-4 px-4 py-3 border-b border-neutral-900 overflow-hidden">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="flex flex-col items-center gap-1.5 animate-pulse">
-            <div className="w-14 h-14 rounded-full bg-neutral-800" />
-            <div className="h-2 w-10 rounded bg-neutral-800" />
+      <div className="flex gap-4 px-4 py-4 border-b border-[#1a1a1a] overflow-hidden">
+        {Array.from({ length: 7 }).map((_, i) => (
+          <div key={i} className="flex flex-col items-center gap-2 animate-pulse shrink-0">
+            <div className="w-15.5 h-15.5 rounded-full bg-[#000000]"
+              style={{ opacity: 1 - i * 0.1 }}
+            />
+            <div className="h-2 w-10 rounded-full bg-neutral-800" />
           </div>
         ))}
       </div>
@@ -63,28 +68,34 @@ function FeedSkeleton() {
 }
 
 function RefreshIndicator({ progress }: { progress: number }) {
-  const size = 24;
-  const radius = 9;
+  const size = 28;
+  const radius = 10;
   const circumference = 2 * Math.PI * radius;
   const dash = (progress / 100) * circumference;
 
   return (
     <div
-      className="flex justify-center items-center transition-all duration-150"
+      className="flex justify-center items-center"
       style={{
-        height: `${Math.max(0, progress * 0.6)}px`,
-        opacity: progress / 100,
+        height: `${Math.max(0, progress * 0.56)}px`,
+        opacity: Math.min(1, progress / 60),
+        transition: "height 80ms linear",
       }}
     >
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="#333" strokeWidth={2} />
+      <svg
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        className="-rotate-90"
+        style={{ transform: `rotate(-90deg) scale(${0.6 + progress * 0.004})` }}
+      >
         <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="white"
-          strokeWidth={2}
+          cx={size / 2} cy={size / 2} r={radius}
+          fill="none" stroke="#262626" strokeWidth={2}
+        />
+        <circle
+          cx={size / 2}cy={size / 2}r={radius}
+          fill="none" stroke="#f0f0f0" strokeWidth={2}
           strokeDasharray={`${dash} ${circumference}`}
           strokeLinecap="round"
         />
@@ -92,6 +103,38 @@ function RefreshIndicator({ progress }: { progress: number }) {
     </div>
   );
 }
+function EmptyFeed() {
+  return (
+    <div className="flex flex-col items-center justify-center py-28 text-center px-8">
+      <div className="w-20 h-20 rounded-full border border-[#2a2a2a] bg-[#111] flex items-center justify-center mb-5">
+        <svg
+          className="w-8 h-8 text-[#444]"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.25}
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"
+          />
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z"
+          />
+        </svg>
+      </div>
+      <p className="text-[#f0f0f0] font-semibold text-[15px] mb-1">No posts yet</p>
+      <p className="text-[#555] text-[13px] leading-relaxed max-w-55">
+        Follow people to see their photos here.
+      </p>
+    </div>
+  );
+}
+
+/*Page*/
 
 export default function FeedPage() {
   const { data: session } = useSession();
@@ -210,41 +253,18 @@ export default function FeedPage() {
 
       {refreshing && (
         <div className="flex justify-center py-3">
-          <div className="w-5 h-5 border-2 border-neutral-700 border-t-white rounded-full animate-spin" />
+          <div className="w-5 h-5 border-[1.5px] border-[#333] border-t-[#f0f0f0] rounded-full animate-spin" />
         </div>
       )}
 
       {initialLoading ? (
         <FeedSkeleton />
       ) : (
-        <main className="max-w-lg mx-auto">
+        <main>
           <StoriesBar />
 
           {posts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-24 text-center">
-              <div className="w-16 h-16 rounded-full border-2 border-neutral-700 flex items-center justify-center mb-4">
-                <svg
-                  className="w-7 h-7 text-neutral-600"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={1.5}
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z"
-                  />
-                </svg>
-              </div>
-              <p className="text-white font-semibold text-sm">No Posts Yet</p>
-              <p className="text-neutral-500 text-xs mt-1">Be the first to share a photo!</p>
-            </div>
+            <EmptyFeed />
           ) : (
             <>
               {posts.map((post, index) => (
@@ -257,21 +277,25 @@ export default function FeedPage() {
                   imageUrl={post.imageUrl}
                   caption={post.caption ?? ""}
                   likes={post.likes.length}
-                  isLiked={post.likes.some(
-                    (l) => l.userId === session?.user?.id,
-                  )}
+                  isLiked={post.likes.some((l) => l.userId === session?.user?.id)}
                   createdAt={post.createdAt ?? ""}
                   isFollowing={post.author.isFollowing ?? false}
                   priority={index === 0}
                 />
               ))}
 
-              <div ref={sentinelRef} className="py-6 flex justify-center">
+              <div ref={sentinelRef} className="py-8 flex justify-center">
                 {loadingMore && (
-                  <div className="w-5 h-5 border-2 border-neutral-700 border-t-white rounded-full animate-spin" />
+                  <div className="w-5 h-5 border-[1.5px] border-[#333] border-t-[#f0f0f0] rounded-full animate-spin" />
                 )}
                 {!hasMore && posts.length > 0 && (
-                  <p className="text-neutral-600 text-xs">all caught up</p>
+                  <div className="flex items-center gap-3">
+                    <div className="h-px w-12 bg-black" />
+                    <p className="text-[#444] text-[11px] tracking-widest uppercase">
+                      all caught up
+                    </p>
+                    <div className="h-px w-12 bg-black" />
+                  </div>
                 )}
               </div>
             </>

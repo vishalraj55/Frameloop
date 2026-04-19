@@ -366,9 +366,9 @@ export default function SettingsPage() {
     ];
 
     return (
-      <main className="max-w-md mx-auto bg-[#080808] min-h-screen text-white pb-24">
+      <main className="max-w-md mx-auto bg-black min-h-screen text-white pb-24">
         {/* Top bar */}
-        <div className="sticky top-0 z-40 flex items-center justify-between px-4 py-3 bg-[#080808] border-b border-[#1a1a1a]">
+        <div className="sticky top-0 z-40 flex items-center justify-between px-4 py-3 bg-black border-b border-[#1a1a1a]">
           <button onClick={() => router.back()} className="p-1">
             <ChevronLeft size={24} className="text-white" />
           </button>
