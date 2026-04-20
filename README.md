@@ -15,3 +15,9 @@ A scalable fullstack social media application built with Next.js and NestJS, fea
 </p>
 
 ---
+
+## Overview
+
+The project is currently under active development and will be deployed once it reaches a stable release.
+
+---
