@@ -5,15 +5,15 @@ import Image from "next/image";
 import { useSession } from "next-auth/react";
 import {
   X,
-  Send,
   Heart,
-  Reply,
+  // Reply, currently not used but will be for the "share comment" feature
   MoreHorizontal,
   Trash2,
   Pencil,
   Flag,
   ChevronDown,
   ChevronUp,
+  Smile,
 } from "lucide-react";
 
 interface Author {
@@ -38,6 +38,10 @@ interface Props {
   postId: string;
   open: boolean;
   onClose: () => void;
+  postAuthor?: Author;
+  postCaption?: string;
+  postCreatedAt?: string;
+  anchorRef?: React.RefObject<HTMLElement>;
 }
 
 function getRelativeTime(dateStr: string): string {
@@ -52,9 +56,12 @@ function getRelativeTime(dateStr: string): string {
   if (days < 7) return `${days}d`;
   return `${weeks}w`;
 }
-function Avatar({ src, name }: { src?: string | null; name?: string | null }) {
+function Avatar({ src, name, size = 32,}: { src?: string | null; name?: string | null; size?: number; }) {
   return (
-    <div className="relative w-8 h-8 rounded-full overflow-hidden shrink-0 bg-neutral-700">
+    <div
+      className="relative rounded-full overflow-hidden shrink-0 bg-neutral-700"
+      style={{ width: size, height: size }}
+    >
       {src ? (
         <Image src={src} alt="" fill className="object-cover" />
       ) : (
@@ -66,7 +73,11 @@ function Avatar({ src, name }: { src?: string | null; name?: string | null }) {
   );
 }
 
-export default function CommentSheet({ postId, open, onClose }: Props) {
+export default function CommentSheet({ postId, open, onClose,
+  postAuthor,
+  postCaption,
+  postCreatedAt,
+}: Props) {
   const { data: session } = useSession();
   const [comments, setComments] = useState<Comment[]>([]);
   const [text, setText] = useState("");
@@ -111,12 +122,6 @@ export default function CommentSheet({ postId, open, onClose }: Props) {
     setTimeout(() => inputRef.current?.focus(), 300);
   }, [open, postId]);
 
-  // Scroll to bottom when new comment added
-  useEffect(() => {
-    if (listRef.current) {
-      listRef.current.scrollTop = listRef.current.scrollHeight;
-    }
-  }, [comments]);
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -293,13 +298,13 @@ export default function CommentSheet({ postId, open, onClose }: Props) {
           onClick={() =>
             setMenuOpenId(menuOpenId === comment.id ? null : comment.id)
           }
-          className="text-neutral-500 hover:text-neutral-300 transition-colors p-1"
+          className="text-neutral-500 hover:text-white transition-colors p-1 rounded-full hover:bg-neutral-700 opacity-0 group-hover:opacity-100"
         >
-          <MoreHorizontal size={16} />
+          <MoreHorizontal size={15} />
         </button>
         {menuOpenId === comment.id && (
-          <div className="absolute right-0 top-6 z-10 bg-neutral-800 rounded-xl shadow-xl border border-neutral-700 overflow-hidden min-w-35">
-            {isOwner && (
+          <div className="absolute right-0 top-7 z-20 bg-neutral-900 shadow-2xl border border-neutral-700/60 overflow-hidden min-w-40 py-1 rounded-md text-left">
+            {isOwner ? (
               <>
                 <button
                   onClick={() => {
@@ -307,19 +312,21 @@ export default function CommentSheet({ postId, open, onClose }: Props) {
                     setEditText(comment.text);
                     setMenuOpenId(null);
                   }}
-                  className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-white hover:bg-neutral-700 transition-colors"
+                  className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-neutral-200 hover:bg-neutral-800 hover:text-white transition-colors"
                 >
-                  <Pencil size={14} /> Edit
+                  <Pencil size={13} className="text-neutral-400" />
+                  <span>Edit</span>
                 </button>
+                <div className="mx-3 h-px bg-neutral-700/60" />
                 <button
                   onClick={() => void handleDelete(comment.id, parentId)}
-                  className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-400 hover:bg-neutral-700 transition-colors"
+                  className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-400 hover:bg-neutral-800 hover:text-red-300 transition-colors"
                 >
-                  <Trash2 size={14} /> Delete
+                  <Trash2 size={13} className="text-red-400" />
+                  <span>Delete</span>
                 </button>
               </>
-            )}
-            {!isOwner && (
+            ) : (
               <button
                 onClick={() => void handleReport(comment.id)}
                 className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-orange-400 hover:bg-neutral-700 transition-colors"
@@ -342,8 +349,10 @@ export default function CommentSheet({ postId, open, onClose }: Props) {
     parentId?: string;
     isReply?: boolean;
   }) => (
-    <div className={`flex items-start gap-3 ${isReply ? "pl-10" : ""}`}>
-      <Avatar src={comment.author.avatarUrl} name={comment.author.username} />
+    <div className={`group flex items-start gap-3 ${isReply ? "pl-11" : ""}`}>
+      <Avatar src={comment.author.avatarUrl} name={comment.author.username}
+        size={32}
+      />
       <div className="flex-1 min-w-0">
         {editingId === comment.id ? (
           <div className="flex items-center gap-2">
@@ -393,14 +402,14 @@ export default function CommentSheet({ postId, open, onClose }: Props) {
                 {comment.isDeleted ? "This comment was deleted." : comment.text}
               </span>
             </p>
-            <div className="flex items-center gap-3 mt-1">
+            <div className="flex items-center gap-3 mt-1.5">
               <span className="text-neutral-500 text-xs">
                 {getRelativeTime(comment.createdAt)}
               </span>
               {!comment.isDeleted && (
                 <>
                   {comment.likesCount > 0 && (
-                    <span className="text-neutral-500 text-xs">
+                    <span className="text-neutral-500 text-xs font-semibold">
                       {comment.likesCount} likes
                     </span>
                   )}
@@ -412,9 +421,9 @@ export default function CommentSheet({ postId, open, onClose }: Props) {
                       });
                       inputRef.current?.focus();
                     }}
-                    className="flex items-center gap-1 text-neutral-500 hover:text-white text-xs transition-colors"
+                    className="text-neutral-500 hover:text-white text-xs font-semibold transition-colors"
                   >
-                    <Reply size={12} /> Reply
+                    Reply
                   </button>
                 </>
               )}
@@ -422,20 +431,18 @@ export default function CommentSheet({ postId, open, onClose }: Props) {
           </>
         )}
       </div>
-
-      {/* Like + menu */}
       {!comment.isDeleted && (
-        <div className="flex flex-col items-center gap-1 shrink-0">
+        <div className="flex flex-col items-center gap-1 shrink-0 pt-0.5">
           <button
             onClick={() => void handleLike(comment.id, parentId)}
             className="transition-transform active:scale-125"
           >
             <Heart
-              size={14}
+              size={12}
               className={
                 comment.likedByMe
                   ? "fill-red-500 text-red-500"
-                  : "text-neutral-400"
+                  : "text-neutral-400 hover:text-neutral-200"
               }
             />
           </button>
@@ -445,136 +452,217 @@ export default function CommentSheet({ postId, open, onClose }: Props) {
     </div>
   );
 
+  const toggleReplies = (id: string) =>
+    setExpandedReplies((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+
+  const CommentsList = () => (
+    <>
+      {loading ? (
+        <div className="flex justify-center py-8">
+          <div className="w-5 h-5 border-2 border-neutral-700 border-t-white rounded-full animate-spin" />
+        </div>
+      ) : comments.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 gap-2">
+          <p className="text-white text-sm font-semibold">No comments yet</p>
+          <p className="text-neutral-500 text-xs">Start the conversation</p>
+        </div>
+      ) : (
+        comments.map((comment) => (
+          <div key={comment.id} className="flex flex-col gap-2">
+            <CommentRow comment={comment} />
+            {(comment.replies?.length ?? 0) > 0 && (
+              <button
+                onClick={() => toggleReplies(comment.id)}
+                className="ml-11 flex items-center gap-2 text-neutral-500 hover:text-white text-xs font-semibold transition-colors w-fit"
+              >
+                <span className="w-5 h-px bg-neutral-600 inline-block" />
+                {expandedReplies.has(comment.id) ? (
+                  <>
+                    <ChevronUp size={12} /> Hide replies
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown size={12} /> View {comment.replies!.length}{" "}
+                    {comment.replies!.length === 1 ? "reply" : "replies"}
+                  </>
+                )}
+              </button>
+            )}
+            {expandedReplies.has(comment.id) &&
+              comment.replies?.map((reply) => (
+                <CommentRow
+                  key={reply.id}
+                  comment={reply}
+                  parentId={comment.id}
+                  isReply
+                />
+              ))}
+          </div>
+        ))
+      )}
+    </>
+  );
+
+  const CommentInput = () => (
+    <div className="border-t border-neutral-800 shrink-0">
+      {replyingTo && (
+        <div className="flex items-center justify-between px-4 pt-2.5">
+          <span className="text-neutral-400 text-xs">
+            Replying to{" "}
+            <span className="text-white font-semibold">
+              @{replyingTo.username}
+            </span>
+          </span>
+          <button onClick={() => setReplyingTo(null)}>
+            <X size={14} className="text-neutral-500" />
+          </button>
+        </div>
+      )}
+      <div className="flex items-center gap-3 px-4 py-3">
+        <button className="text-neutral-400 hover:text-white transition-colors shrink-0">
+          <Smile size={22} />
+        </button>
+        <input
+          ref={inputRef}
+          type="text"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") void handlePost(); }}
+          placeholder={
+            replyingTo
+              ? `Reply to @${replyingTo.username}...`
+              : "Add a comment..."
+          }
+          className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-neutral-500"
+        />
+        <button
+          onClick={() => void handlePost()}
+          disabled={!text.trim() || posting}
+          className="text-[#0095f6] text-sm font-semibold disabled:opacity-30 transition-opacity shrink-0"
+        >
+          Post
+        </button>
+      </div>
+    </div>
+  );
+
   if (!open) return null;
 
   return (
     <>
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-40 bg-black/60"
-        onClick={onClose}
-      />
+      {/*Mobile bottom sheet*/}
+      <div className="md:hidden">
+        <div className="fixed inset-0 z-40 bg-black/60" onClick={onClose} />
+        <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center">
+          <div
+            className="w-full max-w-lg bg-[#1c1c1c] rounded-t-2xl flex flex-col overflow-hidden"
+            style={{ maxHeight: "80vh" }}
+          >
+            <div className="relative flex items-center justify-between px-4 py-3 border-b border-neutral-800 shrink-0">
+              <div className="w-10 h-1 rounded-full bg-neutral-600 absolute left-1/2 -translate-x-1/2 top-2" />
+              <div className="w-6" />
+              <span className="text-white text-sm font-semibold">
+                Comments {comments.length > 0 && `(${comments.length})`}
+              </span>
+              <button onClick={onClose}>
+                <X size={20} className="text-neutral-400" />
+              </button>
+            </div>
+            <div
+              ref={listRef}
+              className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-4"
+            >
+              <CommentsList />
+            </div>
+            <CommentInput />
+          </div>
+        </div>
+      </div>
 
-      {/* Sheet */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center">
-        <div className="w-full max-w-lg bg-[#1c1c1c] rounded-t-2xl flex flex-col"
-          style={{ maxHeight: '80vh' }}
+      {/*Desktop panel that pops out to the right of the post*/}
+      <div className="hidden md:block">
+        {/*dim backdrop but don't cover the post area click anywhere outside to close*/}
+        <div className="fixed inset-0 z-40" onClick={onClose} />
+
+        {/* panel slides in from right edge, sits beside the feed content */}
+        <div
+          className="fixed top-0 right-0 bottom-0 z-50 flex flex-col bg-black border-l border-neutral-800 shadow-2xl"
+          style={{ width: 397 }}
+          onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="relative flex items-center justify-between px-4 py-3 border-b border-neutral-800">
-            <div className="w-10 h-1 rounded-full bg-neutral-600 absolute left-1/2 -translate-x-1/2 top-2" />
-            <div className="w-6" />
-            <span className="text-white text-sm font-semibold">
-              Comments {comments.length > 0 && `(${comments.length})`}
-            </span>
-            <button onClick={onClose}>
-              <X size={20} className="text-neutral-400" />
+          <div className="flex items-center justify-between px-4 py-1 border-b border-neutral-800 shrink-0">
+            <div className="flex items-center gap-3">
+              <Avatar
+                src={postAuthor?.avatarUrl}
+                name={postAuthor?.username}
+                size={36}
+              />
+              <span className="text-white text-sm font-semibold">
+                {postAuthor?.username ?? "User"}
+              </span>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-neutral-400 hover:text-white transition-colors ml-auto"
+            >
+              <X size={20} />
             </button>
           </div>
 
-          {/* List */}
+          {/* Scrollable body */}
           <div
             ref={listRef}
-            className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-4"
+            className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4"
           >
-            {loading ? (
-              <div className="flex justify-center py-8">
-                <div className="w-6 h-6 border-2 border-neutral-700 border-t-white rounded-full animate-spin" />
-              </div>
-            ) : comments.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 gap-2">
-                <p className="text-white text-sm font-semibold">No comments yet</p>
-                <p className="text-neutral-500 text-xs">Start the conversation</p>
-              </div>
-            ) : (
-              comments.map((comment) => (
-                <div key={comment.id} className="flex flex-col gap-2">
-                  <CommentRow comment={comment} />
-
-                  {/* Replies toggle */}
-                  {(comment.replies?.length ?? 0) > 0 && (
-                    <button
-                      onClick={() =>
-                        setExpandedReplies((prev) => {
-                          const next = new Set(prev);
-                          if (next.has(comment.id)) {
-                            next.delete(comment.id);
-                          } else {
-                            next.add(comment.id);
-                          }
-                          return next;
-                        })
-                      }
-                      className="ml-11 flex items-center gap-1 text-neutral-400 hover:text-white text-xs transition-colors w-fit"
-                    >
-                      {expandedReplies.has(comment.id) ? (
-                        <>
-                          <ChevronUp size={12} /> Hide replies
-                        </>
-                      ) : (
-                        <>
-                          <ChevronDown size={12} /> View{" "}
-                          {comment.replies!.length}{" "}
-                          {comment.replies!.length === 1 ? "reply" : "replies"}
-                        </>
-                      )}
-                    </button>
+            {/* Caption */}
+            {postCaption && postAuthor && (
+              <div className="group flex items-start gap-3">
+                <Avatar
+                  src={postAuthor.avatarUrl}
+                  name={postAuthor.username}
+                  size={32}
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-sm leading-snug">
+                    <span className="font-semibold mr-1">
+                      {postAuthor.username}
+                    </span>
+                    <span className="text-neutral-200">{postCaption}</span>
+                  </p>
+                  {postCreatedAt && (
+                    <p className="text-neutral-500 text-xs mt-1.5">
+                      {getRelativeTime(postCreatedAt)}
+                    </p>
                   )}
-
-                  {/* Replies list */}
-                  {expandedReplies.has(comment.id) &&
-                    comment.replies?.map((reply) => (
-                      <CommentRow
-                        key={reply.id}
-                        comment={reply}
-                        parentId={comment.id}
-                        isReply
-                      />
-                    ))}
                 </div>
-              ))
+              </div>
             )}
+            <CommentsList />
           </div>
 
-          {/* Input */}
-          <div className="border-t border-neutral-800">
-            {replyingTo && (
-              <div className="flex items-center justify-between px-4 pt-2">
-                <span className="text-neutral-400 text-xs">
-                  Replying to{" "}
-                  <span className="text-white font-semibold">
-                    @{replyingTo.username}
-                  </span>
-                </span>
-                <button onClick={() => setReplyingTo(null)}>
-                  <X size={14} className="text-neutral-500" />
-                </button>
-              </div>
-            )}
-            <div className="flex items-center gap-3 px-4 py-3">
-              <Avatar src={session?.user?.image} name={session?.user?.name} />
-              <input
-                ref={inputRef}
-                type="text"
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") void handlePost(); }}
-                placeholder={
-                  replyingTo
-                    ? `Reply to @${replyingTo.username}...`
-                    : "Add a comment..."
-                }
-                className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-neutral-500"
-              />
-              <button
-                onClick={() => void handlePost()}
-                disabled={!text.trim() || posting}
-                className="text-[#0095f6] disabled:opacity-30 transition-opacity"
-              >
-                <Send size={20} />
+          {/* Like/share row "You want to work on this" */}
+
+          {/* <div className="px-4 py-3 border-t border-neutral-800 shrink-0">
+            <div className="flex items-center gap-4">
+              <button className="text-white hover:text-neutral-400 transition-colors">
+                <Heart size={24} />
+              </button>
+              <button className="text-white hover:text-neutral-400 transition-colors">
+                <Reply size={22} />
               </button>
             </div>
-          </div>
+          </div> */}
+
+          <CommentInput />
         </div>
       </div>
     </>
