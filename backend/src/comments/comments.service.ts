@@ -65,6 +65,36 @@ export class CommentsService {
       include: commentInclude,
     });
 
+    const post = await this.prisma.post.findUnique({ where: { id: postId } });
+    if (post && post.authorId !== authorId) {
+      await this.prisma.notification.create({
+        data: {
+          type: 'comment',
+          senderId: authorId,
+          receiverId: post.authorId,
+          postId: post.id,
+          commentId: comment.id,
+        },
+      });
+    }
+
+    if (parentId) {
+      const parentComment = await this.prisma.comment.findUnique({
+        where: { id: parentId },
+      });
+      if (parentComment && parentComment.authorId !== authorId) {
+        await this.prisma.notification.create({
+          data: {
+            type: 'comment',
+            senderId: authorId,
+            receiverId: parentComment.authorId,
+            postId,
+            commentId: comment.id,
+          },
+        });
+      }
+    }
+
     return formatComment(comment);
   }
 
@@ -105,6 +135,18 @@ export class CommentsService {
           await this.prisma.commentLike.create({
             data: { commentId, userId: body.userId! },
           });
+
+          if (comment.authorId !== body.userId) {
+            await this.prisma.notification.create({
+              data: {
+                type: 'like',
+                senderId: body.userId!,
+                receiverId: comment.authorId,
+                postId: comment.postId,
+                commentId: comment.id,
+              },
+            });
+          }
         }
 
         const updated = await this.prisma.comment.findUnique({

@@ -185,6 +185,14 @@ export class UsersService {
       data: { followerId, followingId: target.id },
     });
 
+    await this.prisma.notification.create({
+      data: {
+        type: 'follow',
+        senderId: followerId,
+        receiverId: target.id,
+      },
+    });
+
     return { following: true };
   }
 

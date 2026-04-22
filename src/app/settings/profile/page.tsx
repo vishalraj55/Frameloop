@@ -158,11 +158,11 @@ export default function EditProfilePage() {
       formData.append("allowStoryResharing", String(form.allowStoryResharing));
       formData.append("links", JSON.stringify(form.links));
       if (avatarFile) formData.append("avatar", avatarFile);
+      formData.append("token", session?.user?.token ?? "");
 
       const res = await fetch(`/api/users/${session?.user?.username}`, {
         method: "PATCH",
         headers: {
-          Authorization: `Bearer ${session?.user?.token}`,
         },
         body: formData,
       });

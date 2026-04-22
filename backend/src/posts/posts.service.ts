@@ -78,6 +78,20 @@ export class PostsService {
     }
 
     await this.prisma.like.create({ data: { postId, userId } });
+
+    // Notify post author
+    const post = await this.prisma.post.findUnique({ where: { id: postId } });
+    if (post && post.authorId !== userId) {
+      await this.prisma.notification.create({
+        data: {
+          type: 'like',
+          senderId: userId,
+          receiverId: post.authorId,
+          postId,
+        },
+      });
+    }
+
     const count = await this.prisma.like.count({ where: { postId } });
     return { liked: true, count };
   }
