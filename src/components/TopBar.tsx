@@ -35,17 +35,9 @@ function timeAgo(date: string) {
   return `${Math.floor(diff / 86400)}d`;
 }
 
-function NotifIcon({ type }: { type: Notification["type"] }) {
-  if (type === "like")
-    return <Heart size={9} fill="white" className="text-white" />;
-  if (type === "comment")
-    return <MessageCircle size={9} fill="white" className="text-white" />;
-  return <UserPlus size={9} className="text-white" />;
-}
-
 function notifAccent(type: Notification["type"]) {
   if (type === "like") return "#f43f5e";
-  if (type === "comment") return "#0095f6";
+  if (type === "comment") return "#3b82f6";
   return "#a855f7";
 }
 
@@ -53,6 +45,36 @@ function notifText(type: Notification["type"]) {
   if (type === "like") return "liked your post";
   if (type === "comment") return "commented on your post";
   return "started following you";
+}
+
+function NotifBadge({ type }: { type: Notification["type"] }) {
+  const bg = notifAccent(type);
+  if (type === "like")
+    return (
+      <span
+        className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center"
+        style={{ background: bg, border: "2px solid #141414" }}
+      >
+        <Heart size={8} fill="white" className="text-white" />
+      </span>
+    );
+  if (type === "comment")
+    return (
+      <span
+        className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center"
+        style={{ background: bg, border: "2px solid #141414" }}
+      >
+        <MessageCircle size={8} fill="white" className="text-white" />
+      </span>
+    );
+  return (
+    <span
+      className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center"
+      style={{ background: bg, border: "2px solid #141414" }}
+    >
+      <UserPlus size={8} className="text-white" />
+    </span>
+  );
 }
 
 function NotificationList({
@@ -67,15 +89,20 @@ function NotificationList({
   onNavigate: (url: string) => void;
 }) {
   return (
-    <div className="overflow-y-auto" style={{ maxHeight }}>
+    <div className="overflow-y-auto space-y-2 p-2" style={{ maxHeight }}>
       {notifications.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 gap-4">
-          <div className="w-14 h-14 rounded-full flex items-center justify-center bg-white/5">
-            <Bell size={22} className="text-[#444]" />
+        <div className="flex flex-col items-center justify-center py-14 gap-3">
+          <div
+            className="w-12 h-12 rounded-full flex items-center justify-center"
+            style={{ background: "#1f1f1f" }}
+          >
+            <Bell size={20} className="text-neutral-500" />
           </div>
           <div className="text-center">
-            <p className="text-[#555] text-[13px]">All caught up</p>
-            <p className="text-[#333] text-[11px] mt-0.5">
+            <p className="text-neutral-400 text-[13px] font-medium">
+              All caught up
+            </p>
+            <p className="text-neutral-600 text-[12px] mt-0.5">
               No new notifications
             </p>
           </div>
@@ -89,63 +116,64 @@ function NotificationList({
               if (n.postId) onNavigate(`/post/${n.postId}`);
               else onNavigate(`/profile/${n.sender.username}`);
             }}
-            className="w-full text-left px-5 py-4 flex items-center gap-4 hover:bg-white/3 active:bg-white/5 transition-colors first:pt-6"
+            className="w-full text-left flex items-start gap-5 px-4 py-3 rounded-lg transition-colors"
             style={{
+              background: !n.read ? "rgba(255,255,255,0.03)" : "transparent",
               borderBottom:
-                i < notifications.length - 1
-                  ? "1px solid rgba(255,255,255,0.05)"
+                i < notifications.length - 5
+                  ? "1px solid rgba(255,255,255,0.06)"
                   : "none",
-              background: !n.read ? "rgba(0,149,246,0.03)" : undefined,
             }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.background = "rgba(255,255,255,0.05)")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.background = !n.read
+                ? "rgba(255,255,255,0.03)"
+                : "transparent")
+            }
           >
             {/* Avatar */}
             <div className="relative shrink-0">
-              <div className="w-9 h-9 rounded-full overflow-hidden bg-[#222] flex items-center justify-center">
+              <div
+                className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center text-white text-sm font-semibold"
+                style={{ background: "#2a2a2a" }}
+              >
                 {n.sender.avatarUrl ? (
                   <Image
                     src={n.sender.avatarUrl}
                     alt={n.sender.username}
-                    width={36}
-                    height={36}
+                    width={40}
+                    height={40}
                     className="object-cover w-full h-full"
                   />
                 ) : (
-                  <span className="text-white text-xs font-bold">
-                    {n.sender.username[0]?.toUpperCase()}
-                  </span>
+                  n.sender.username[0]?.toUpperCase()
                 )}
               </div>
-              <div
-                className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center"
-                style={{
-                  background: notifAccent(n.type),
-                  border: "1.5px solid #111",
-                }}
-              >
-                <NotifIcon type={n.type} />
-              </div>
+              <NotifBadge type={n.type} />
             </div>
 
             {/* Text */}
             <div className="flex-1 min-w-0">
-              <p className="text-[13px] leading-snug text-[#ccc]">
+              <p className="text-[13px] leading-snug">
                 <span className="font-semibold text-white">
                   {n.sender.username}
                 </span>{" "}
-                <span className="text-[#777]">{notifText(n.type)}</span>
+                <span className="text-neutral-400">{notifText(n.type)}</span>
               </p>
               {n.type === "comment" && n.comment?.text && (
-                <p className="text-[12px] text-[#555] mt-0.5 truncate">
+                <p className="text-[12px] text-neutral-600 mt-0.5 truncate">
                   &quot;{n.comment.text}&quot;
                 </p>
               )}
-              <p className="text-[11px] mt-1 text-[#444]">
+              <p className="text-[11px] mt-1 text-neutral-600">
                 {timeAgo(n.createdAt)}
               </p>
             </div>
 
             {!n.read && (
-              <div className="w-1.5 h-1.5 rounded-full shrink-0 bg-[#0095f6]" />
+              <div className="w-2 h-2 rounded-full shrink-0 bg-blue-500" />
             )}
           </button>
         ))
@@ -268,7 +296,7 @@ export default function TopBar() {
                 >
                   <Bell size={22} strokeWidth={1.8} className="text-white" />
                   {unread > 0 && (
-                    <span className="absolute bottom-0 left-0 min-w-3.75 h-3.75 px-0.5 bg-red-800 rounded-full text-[9px] font-bold text-white flex items-center justify-center leading-none">
+                    <span className="absolute top-1 right-1 min-w-4 h-4 px-0.5 bg-blue-500 rounded-full text-[9px] font-bold text-white flex items-center justify-center leading-none">
                       {unread > 9 ? "9+" : unread}
                     </span>
                   )}
@@ -277,29 +305,56 @@ export default function TopBar() {
                 {/* Desktop dropdown */}
                 {open && !isMobile && (
                   <div
-                    className="absolute right-0 mt-2 w-85 rounded-xl z-50 overflow-hidden"
+                    className="absolute right-0 mt-2 w-90 rounded-2xl z-50 overflow-hidden p-2"
                     style={{
-                      background: "#111",
-                      border: "1px solid rgba(255,255,255,0.07)",
-                      boxShadow: "0 20px 60px rgba(0,0,0,0.8)",
+                      background: "#141414",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      boxShadow:
+                        "0 8px 32px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4)",
                     }}
                   >
-                    <div className="flex items-center justify-between px-5 pt-5 pb-3">
-                      <span className="text-white font-semibold text-[16px]">
+                    <div className="flex items-center justify-between px-4 py-3"
+                      style={{
+                        borderBottom: "1px solid rgba(255,255,255,0.06)",
+                      }}
+                    >
+                      <span className="text-white font-semibold text-[15px]">
                         Notifications
                       </span>
                       {unread > 0 && (
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#0095f6]/10 text-[#0095f6]">
+                        <span
+                          className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                          style={{
+                            background: "rgba(59,130,246,0.15)",
+                            color: "#60a5fa",
+                          }}
+                        >
                           {unread} new
                         </span>
                       )}
                     </div>
                     <NotificationList
                       notifications={notifications}
-                      maxHeight="420px"
+                      maxHeight="400px"
                       onClose={handleClose}
                       onNavigate={handleNavigate}
                     />
+
+                    {/*Footer*/}
+                    <div
+                      className="py-3 text-center"
+                      style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+                    >
+                      <button
+                        onClick={() => {
+                          handleClose();
+                          router.push("/notifications");
+                        }}
+                        className="text-[13px] font-medium text-blue-400 hover:text-blue-300 transition-colors"
+                      >
+                        View all notifications
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -337,11 +392,11 @@ export default function TopBar() {
 
       {/*mobile full-screen sheet*/}
       {open && isMobile && (
-        <div
-          className="fixed inset-0 z-50 flex flex-col"
-          style={{ background: "#111" }}
-        >
-          <div className="flex items-center justify-between px-5 pt-14 pb-5 border-b border-white/5">
+        <div className="fixed inset-0 z-50 flex flex-col bg-[#0e0e0e]">
+          <div
+            className="flex items-center justify-between px-5 pt-14 pb-4"
+            style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+          >
             <span className="text-white font-semibold text-[17px]">
               Notifications
             </span>
@@ -349,7 +404,7 @@ export default function TopBar() {
               onClick={handleClose}
               className="p-2 rounded-full hover:bg-white/5 transition"
             >
-              <X size={20} className="text-[#888]" />
+              <X size={20} className="text-neutral-500" />
             </button>
           </div>
           <NotificationList
