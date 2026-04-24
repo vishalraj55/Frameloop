@@ -74,13 +74,13 @@ function Avatar({
 }) {
   return (
     <div
-      className="relative rounded-full overflow-hidden shrink-0 bg-neutral-700"
-      style={{ width: size, height: size }}
+      className="relative rounded-full overflow-hidden shrink-0"
+      style={{ width: size, height: size, background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",}}
     >
       {src ? (
         <Image src={src} alt="" fill className="object-cover" />
       ) : (
-        <div className="w-full h-full flex items-center justify-center text-xs font-semibold text-white">
+        <div className="w-full h-full flex items-center justify-center text-xs font-bold text-white">
           {name?.[0]?.toUpperCase() ?? "?"}
         </div>
       )}
@@ -90,17 +90,35 @@ function Avatar({
 
 function GridSkeleton() {
   return (
-    <div className="grid grid-cols-3 gap-0.5 sm:gap-1 md:gap-2">
-      {Array.from({ length: 15 }).map((_, i) => (
+    <div className="grid grid-cols-3 gap-0.5 sm:gap-0.75">
+      {Array.from({ length: 12 }).map((_, i) => (
         <div
           key={i}
-          className={`relative bg-neutral-900 animate-pulse ${
-            i % 7 === 0
-              ? "col-span-2 row-span-2 aspect-square"
-              : "aspect-square"
-          }`}
-        />
+          className={`relative bg-[#111] ${
+            i % 7 === 0 
+            ? "col-span-2 row-span-2" : ""
+          } aspect-square`}
+          style={{
+            animation: `shimmer 1.5s ease-in-out ${i * 0.1}s infinite`,
+          }}
+        >
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(90deg, #111 0%, #1a1a1a 50%, #111 100%)",
+              backgroundSize: "200% 100%",
+              animation: "shimmerBg 1.5s ease-in-out infinite",
+            }}
+          />
+        </div>
       ))}
+      <style>{`
+        @keyframes shimmerBg {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+      `}</style>
     </div>
   );
 }
@@ -119,29 +137,52 @@ function PostTile({
   return (
     <button
       onClick={onClick}
-      className={`relative block bg-neutral-900 overflow-hidden group ${
-        isLarge ? "col-span-2 row-span-2 aspect-square" : "aspect-square"
-      }`}
+      className={`relative block overflow-hidden group ${
+        isLarge ? "col-span-2 row-span-2" : ""
+      } aspect-square`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      style={{
+        transform: hovered ? "scale(0.98)" : "scale(1)",
+        transition: "transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)",
+      }}
     >
       <Image
         src={post.imageUrl}
         alt=""
         fill
-        className={`object-cover transition-transform duration-500 ${hovered ? "scale-110" : "scale-100"}`}
+        className="object-cover"
+        style={{
+          transform: hovered ? "scale(1.08)" : "scale(1)",
+          transition: "transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+        }}
         sizes="(max-width: 768px) 33vw, 300px"
       />
       <div
-        className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ${
-          hovered ? "bg-black/50 opacity-100" : "opacity-0"
-        }`}
+        className="absolute inset-0 flex flex-col items-center justify-center gap-3"
+        style={{
+          background: hovered ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0)",
+          opacity: hovered ? 1 : 0,
+          transition: "all 0.25s ease",
+        }}
       >
-        <div className="flex items-center gap-2 text-white font-semibold text-sm">
-          <Heart className="w-5 h-5 fill-white" />
-          {post.likes.length}
+        <div className="flex items-center gap-5">
+          <div className="flex items-center gap-1.5 text-white font-bold text-sm drop-shadow-lg">
+            <Heart className="w-5 h-5 fill-white" />
+            {post.likes.length}
+          </div>
         </div>
       </div>
+
+      <div
+        className="absolute inset-x-0 top-0 h-0.5"
+        style={{
+          background:
+            "linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent)",
+          opacity: hovered ? 1 : 0,
+          transition: "opacity 0.2s ease",
+        }}
+      />
     </button>
   );
 }
@@ -358,12 +399,20 @@ function CommentSection({
           onClick={() =>
             setMenuOpenId(menuOpenId === comment.id ? null : comment.id)
           }
-          className="text-neutral-600 hover:text-neutral-300 transition-colors opacity-0 group-hover:opacity-100 p-0.5"
+          className="opacity-0 group-hover:opacity-100 transition-opacity text-neutral-500 hover:text-white p-0.5"
         >
           <MoreHorizontal size={14} />
         </button>
         {menuOpenId === comment.id && (
-          <div className="absolute right-0 top-6 z-20 bg-[#262626] rounded-xl shadow-2xl overflow-hidden min-w-35">
+          <div className="absolute right-0 top-6 z-20 rounded-2xl shadow-2xl overflow-hidden min-w-35"
+            style={{
+              background: "rgba(30,30,30,0.95)",
+              backdropFilter: "blur(20px)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              animation: "menuPop 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)",
+            }}
+          >
+            <style>{`@keyframes menuPop { from { opacity: 0; transform: scale(0.9) translateY(-4px); } to { opacity: 1; transform: scale(1) translateY(0); } }`}</style>
             {isOwner ? (
               <>
                 <button
@@ -372,16 +421,20 @@ function CommentSection({
                     setEditText(comment.text);
                     setMenuOpenId(null);
                   }}
-                  className="flex items-center gap-2.5 w-full px-4 py-3 text-[13px] text-white hover:bg-[#363636] transition-colors"
+                  className="flex items-center gap-2.5 w-full px-4 py-3 text-[13px] text-white hover:bg-white/5 transition-colors"
                 >
-                  <Pencil size={13} className="text-neutral-300 shrink-0" />{" "}
+                  <Pencil size={13} className="text-neutral-400 shrink-0" />{" "}
                   Edit
                 </button>
+                <div
+                  className="h-px mx-3"
+                  style={{ background: "rgba(255,255,255,0.06)" }}
+                />
                 <button
                   onClick={() => void handleDelete(comment.id, parentId)}
-                  className="flex items-center gap-2.5 w-full px-4 py-3 text-[13px] text-red-500 hover:bg-[#363636] transition-colors"
+                  className="flex items-center gap-2.5 w-full px-4 py-3 text-[13px] text-red-400 hover:bg-white/5 transition-colors"
                 >
-                  <Trash2 size={13} className="text-red-500 shrink-0" /> Delete
+                  <Trash2 size={13} className="text-red-400 shrink-0" /> Delete
                 </button>
               </>
             ) : (
@@ -409,11 +462,13 @@ function CommentSection({
     parentId?: string;
     isReply?: boolean;
   }) => (
-    <div className={`group flex items-start gap-3 ${isReply ? "pl-11" : ""}`}>
+    <div className={`group flex items-start gap-2.5 ${isReply ? "pl-10" : ""}`}
+      style={{ animation: "fadeSlideIn 0.2s ease" }}
+    >
       <Avatar
         src={comment.author.avatarUrl}
         name={comment.author.username}
-        size={32}
+        size={30}
       />
       <div className="flex-1 min-w-0">
         {editingId === comment.id ? (
@@ -430,11 +485,15 @@ function CommentSection({
                   setEditText("");
                 }
               }}
-              className="flex-1 bg-neutral-700 text-white text-sm px-3 py-1.5 rounded-lg outline-none"
+              className="flex-1 text-white text-sm px-3 py-1.5 rounded-xl outline-none"
+              style={{
+                background: "rgba(255,255,255,0.08)",
+                border: "1px solid rgba(255,255,255,0.15)",
+              }}
             />
             <button
               onClick={() => void handleEditSave(comment.id, parentId)}
-              className="text-[#0095f6] text-xs font-semibold"
+              className="text-[#0095f6] text-xs font-semibold hover:text-blue-400 transition-colors"
             >
               Save
             </button>
@@ -450,28 +509,28 @@ function CommentSection({
           </div>
         ) : (
           <>
-            <p className="text-white text-sm leading-snug">
+            <p className="text-white text-[13px] leading-snug">
               <span className="font-semibold mr-1">
                 {comment.author.username}
               </span>
               <span
                 className={
                   comment.isDeleted
-                    ? "text-neutral-500 italic"
+                    ? "text-neutral-600 italic"
                     : "text-neutral-200"
                 }
               >
                 {comment.isDeleted ? "This comment was deleted." : comment.text}
               </span>
             </p>
-            <div className="flex items-center gap-3 mt-1.5">
-              <span className="text-neutral-500 text-xs">
+            <div className="flex items-center gap-3 mt-1">
+              <span className="text-neutral-600 text-[11px]">
                 {getRelativeTime(comment.createdAt)}
               </span>
               {!comment.isDeleted && (
                 <>
                   {comment.likesCount > 0 && (
-                    <span className="text-neutral-500 text-xs font-semibold">
+                    <span className="text-neutral-500 text-[11px] font-semibold">
                       {comment.likesCount} likes
                     </span>
                   )}
@@ -483,7 +542,7 @@ function CommentSection({
                       });
                       inputRef.current?.focus();
                     }}
-                    className="text-neutral-500 hover:text-white text-xs font-semibold transition-colors"
+                    className="text-neutral-500 hover:text-white text-[11px] font-semibold transition-colors"
                   >
                     Reply
                   </button>
@@ -497,14 +556,14 @@ function CommentSection({
         <div className="flex flex-col items-center gap-1 shrink-0 pt-0.5">
           <button
             onClick={() => void handleLike(comment.id, parentId)}
-            className="transition-transform active:scale-125"
+            className="transition-all active:scale-125"
           >
             <Heart
-              size={12}
+              size={11}
               className={
                 comment.likedByMe
                   ? "fill-red-500 text-red-500"
-                  : "text-neutral-400 hover:text-neutral-200"
+                  : "text-neutral-500 hover:text-neutral-300 transition-colors"
               }
             />
           </button>
@@ -516,15 +575,27 @@ function CommentSection({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4">
+      <style>{`
+        @keyframes fadeSlideIn {
+          from { opacity: 0; transform: translateY(6px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+      <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-4">
         {loading ? (
-          <div className="flex justify-center py-8">
-            <div className="w-5 h-5 border-2 border-neutral-700 border-t-white rounded-full animate-spin" />
+          <div className="flex justify-center py-12">
+            <div className="w-6 h-6 rounded-full border-2 border-neutral-800 border-t-neutral-400 animate-spin" />
           </div>
         ) : comments.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 gap-2">
+          <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">
+            <div
+              className="w-12 h-12 rounded-full flex items-center justify-center mb-1"
+              style={{ background: "rgba(255,255,255,0.04)" }}
+            >
+              <MessageCircle size={20} className="text-neutral-600" />
+            </div>
             <p className="text-white text-sm font-semibold">No comments yet</p>
-            <p className="text-neutral-500 text-xs">Start the conversation</p>
+            <p className="text-neutral-600 text-xs">Be the first to comment</p>
           </div>
         ) : (
           comments.map((comment) => (
@@ -533,16 +604,18 @@ function CommentSection({
               {(comment.replies?.length ?? 0) > 0 && (
                 <button
                   onClick={() => toggleReplies(comment.id)}
-                  className="ml-11 flex items-center gap-2 text-neutral-500 hover:text-white text-xs font-semibold transition-colors w-fit"
+                  className="ml-10 flex items-center gap-2 text-neutral-500 hover:text-neutral-300 text-xs font-semibold transition-colors w-fit"
                 >
-                  <span className="w-5 h-px bg-neutral-600 inline-block" />
+                  <span className="w-5 h-px inline-block"
+                    style={{ background: "rgba(255,255,255,0.15)" }}
+                  />
                   {expandedReplies.has(comment.id) ? (
                     <>
-                      <ChevronUp size={12} /> Hide replies
+                      <ChevronUp size={11} /> Hide replies
                     </>
                   ) : (
                     <>
-                      <ChevronDown size={12} /> View {comment.replies!.length}{" "}
+                      <ChevronDown size={11} /> View {comment.replies!.length}{" "}
                       {comment.replies!.length === 1 ? "reply" : "replies"}
                     </>
                   )}
@@ -563,23 +636,25 @@ function CommentSection({
       </div>
 
       {/* Input */}
-      <div className="border-t border-neutral-800 shrink-0">
+      <div className="shrink-0"
+        style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+      >
         {replyingTo && (
-          <div className="flex items-center justify-between px-4 pt-2.5">
-            <span className="text-neutral-400 text-xs">
+          <div className="flex items-center justify-between px-4 pt-2">
+            <span className="text-neutral-500 text-xs">
               Replying to{" "}
               <span className="text-white font-semibold">
                 @{replyingTo.username}
               </span>
             </span>
             <button onClick={() => setReplyingTo(null)}>
-              <X size={14} className="text-neutral-500" />
+              <X size={13} className="text-neutral-500 hover:text-white transition-colors" />
             </button>
           </div>
         )}
         <div className="flex items-center gap-3 px-4 py-3">
-          <button className="text-neutral-400 hover:text-white transition-colors shrink-0">
-            <Smile size={22} />
+          <button className="text-neutral-500 hover:text-white transition-colors shrink-0">
+            <Smile size={20} />
           </button>
           <input
             ref={inputRef}
@@ -594,14 +669,18 @@ function CommentSection({
                 ? `Reply to @${replyingTo.username}...`
                 : "Add a comment..."
             }
-            className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-neutral-500"
+            className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-neutral-600"
           />
           <button
             onClick={() => void handlePost()}
             disabled={!text.trim() || posting}
-            className="text-[#0095f6] text-sm font-semibold disabled:opacity-30 transition-opacity shrink-0"
+            className="text-[#0095f6] text-sm font-semibold disabled:opacity-25 transition-opacity hover:text-blue-400 shrink-0"
           >
-            Post
+            {posting ? (
+              <div className="w-4 h-4 rounded-full border-2 border-blue-500/30 border-t-blue-500 animate-spin" />
+            ) : (
+              "Post"
+            )}
           </button>
         </div>
       </div>
@@ -629,6 +708,11 @@ function LightboxModal({
   onSaveToggle: (postId: string) => void;
 }) {
   const post = posts[currentIndex];
+  const [visible, setVisible] = useState(false);
+  const [heartPop, setHeartPop] = useState(false);
+  useEffect(() => {
+    requestAnimationFrame(() => setVisible(true));
+  }, []);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -640,21 +724,54 @@ function LightboxModal({
     return () => window.removeEventListener("keydown", handler);
   }, [onClose, onPrev, onNext]);
 
+  const handleLikeWithPop = (id: string) => {
+    setHeartPop(true);
+    onLikeToggle(id);
+    setTimeout(() => setHeartPop(false), 400);
+  };
+
   if (!post) return null;
 
   const likesCount = post.likes.length;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{
+        background: visible ? "rgba(0,0,0,0.88)" : "rgba(0,0,0,0)",
+        backdropFilter: "blur(12px)",
+        transition: "background 0.3s ease",
+      }}
       onClick={onClose}
     >
+      <style>{`
+        @keyframes modalSlideUp {
+          from { opacity: 0; transform: translateY(24px) scale(0.97); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes heartBeat {
+          0% { transform: scale(1); }
+          30% { transform: scale(1.4); }
+          60% { transform: scale(0.9); }
+          100% { transform: scale(1); }
+        }
+        @keyframes slideInLeft {
+          from { opacity: 0; transform: translateX(-12px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+      `}</style>
       {/* Close */}
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 text-white hover:text-neutral-300 transition-colors z-50"
+        className="absolute top-4 right-4 z-50 text-neutral-400 hover:text-white transition-all hover:rotate-90 duration-300"
+        style={{
+          background: "rgba(255,255,255,0.06)",
+          borderRadius: "50%",
+          padding: "8px",
+          border: "1px solid rgba(255,255,255,0.08)",
+        }}
       >
-        <X size={28} />
+        <X size={18} />
       </button>
 
       {/* Prev */}
@@ -664,9 +781,16 @@ function LightboxModal({
             e.stopPropagation();
             onPrev();
           }}
-          className="absolute left-4 top-1/2 -translate-y-1/2 z-50 bg-black/50 hover:bg-black/80 text-white rounded-full p-2 transition-colors"
+          className="absolute left-4 top-1/2 -translate-y-1/2 z-50 text-white transition-all hover:scale-110 active:scale-95"
+          style={{
+            background: "rgba(255,255,255,0.08)",
+            backdropFilter: "blur(10px)",
+            borderRadius: "50%",
+            padding: "10px",
+            border: "1px solid rgba(255,255,255,0.1)",
+          }}
         >
-          <ChevronLeft size={24} />
+          <ChevronLeft size={20} />
         </button>
       )}
 
@@ -677,60 +801,100 @@ function LightboxModal({
             e.stopPropagation();
             onNext();
           }}
-          className="absolute right-4 top-1/2 -translate-y-1/2 z-50 bg-black/50 hover:bg-black/80 text-white rounded-full p-2 transition-colors"
+          className="absolute right-4 top-1/2 -translate-y-1/2 z-50 text-white transition-all hover:scale-110 active:scale-95"
+          style={{
+            background: "rgba(255,255,255,0.08)",
+            backdropFilter: "blur(10px)",
+            borderRadius: "50%",
+            padding: "10px",
+            border: "1px solid rgba(255,255,255,0.1)",
+          }}
         >
-          <ChevronRight size={24} />
+          <ChevronRight size={20} />
         </button>
       )}
 
       {/*Desktop layout*/}
       <div
-        className="hidden md:flex bg-black rounded-xl overflow-hidden shadow-2xl w-full max-w-5xl mx-8"
-        style={{ height: "min(90vh, 700px)" }}
+        className="hidden md:flex overflow-hidden w-full mx-20"
+        style={{
+          maxWidth: "960px",
+          height: "min(88vh, 680px)",
+          borderRadius: "16px",
+          background: "#0a0a0a",
+          border: "1px solid rgba(255,255,255,0.07)",
+          boxShadow: "0 32px 80px rgba(0,0,0,0.7)",
+          animation: "modalSlideUp 0.35s cubic-bezier(0.34, 1.2, 0.64, 1)",
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Image */}
         <div className="relative flex-1 min-w-0 bg-black">
-          <Image src={post.imageUrl} alt="" fill className="object-contain" />
+          <Image src={post.imageUrl} alt="" fill className="object-contain"
+            style={{ transition: "opacity 0.3s ease" }}
+          />
         </div>
 
         {/* Comments panel */}
-        <div className="w-90 shrink-0 flex flex-col border-l border-neutral-800 bg-black">
+        <div className="w-85 shrink-0 flex flex-col"
+          style={{ borderLeft: "1px solid rgba(255,255,255,0.06)" }}
+        >
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800 shrink-0">
+          <div className="flex items-center justify-between px-4 py-3.5 shrink-0"
+            style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+          >
             <div className="flex items-center gap-3">
-              <Avatar
-                src={post.author?.avatarUrl}
-                name={post.author?.username}
-                size={36}
-              />
-              <span className="text-white text-sm font-semibold">
-                {post.author?.username ?? "User"}
-              </span>
+              <div
+                className="p-0.5 rounded-full"
+                style={{
+                  background:
+                    "linear-gradient(135deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)",
+                }}
+              >
+                <div className="p-[1.5px] rounded-full bg-[#0a0a0a]">
+                  <Avatar
+                    src={post.author?.avatarUrl}
+                    name={post.author?.username}
+                    size={32}
+                  />
+                </div>
+              </div>
+              <div>
+                <p className="text-white text-[13px] font-semibold leading-tight">
+                  {post.author?.username ?? "User"}
+                </p>
+                {post.createdAt && (
+                  <p className="text-neutral-500 text-[11px]">
+                    {getRelativeTime(post.createdAt)}
+                  </p>
+                )}
+              </div>
             </div>
-            <button className="text-neutral-400 hover:text-white transition-colors">
-              <MoreHorizontal size={20} />
+            <button className="text-neutral-500 hover:text-white transition-colors">
+              <MoreHorizontal size={18} />
             </button>
           </div>
 
           {/*Caption+comments*/}
-          <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4 min-h-0">
+          <div className="flex-1 overflow-y-auto min-h-0">
             {post.caption && post.author && (
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-3 px-4 py-3"
+                style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}
+              >
                 <Avatar
                   src={post.author.avatarUrl}
                   name={post.author.username}
-                  size={32}
+                  size={30}
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="text-white text-sm leading-snug">
+                  <p className="text-white text-[13px] leading-snug">
                     <span className="font-semibold mr-1">
                       {post.author.username}
                     </span>
-                    <span className="text-neutral-200">{post.caption}</span>
+                    <span className="text-neutral-300">{post.caption}</span>
                   </p>
                   {post.createdAt && (
-                    <p className="text-neutral-500 text-xs mt-1.5">
+                    <p className="text-neutral-600 text-[11px] mt-1">
                       {getRelativeTime(post.createdAt)}
                     </p>
                   )}
@@ -741,35 +905,43 @@ function LightboxModal({
           </div>
 
           {/*Actions*/}
-          <div className="border-t border-neutral-800 px-4 py-3 shrink-0">
-            <div className="flex items-center justify-between mb-2">
+          <div className="px-4 py-3 shrink-0"
+            style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+          >
+            <div className="flex items-center justify-between mb-2.5">
               <div className="flex items-center gap-4">
                 <button
-                  onClick={() => onLikeToggle(post.id)}
-                  className="transition-transform active:scale-110"
+                  onClick={() => handleLikeWithPop(post.id)}
+                  style={{
+                    animation:
+                      heartPop && post.likedByMe
+                        ? "heartBeat 0.4s ease"
+                        : "none",
+                  }}
                 >
                   <Heart
-                    size={24}
+                    size={22}
                     className={
                       post.likedByMe
                         ? "fill-red-500 text-red-500"
                         : "text-white hover:text-neutral-400 transition-colors"
                     }
+                    style={{ transition: "color 0.15s ease, fill 0.15s ease" }}
                   />
                 </button>
                 <button className="text-white hover:text-neutral-400 transition-colors">
-                  <MessageCircle size={24} />
+                  <MessageCircle size={22} />
                 </button>
                 <button className="text-white hover:text-neutral-400 transition-colors">
-                  <Send size={22} />
+                  <Send size={20} />
                 </button>
               </div>
               <button
                 onClick={() => onSaveToggle(post.id)}
-                className="transition-transform active:scale-110"
+                className="transition-all active:scale-125"
               >
                 <Bookmark
-                  size={22}
+                  size={20}
                   className={
                     post.savedByMe
                       ? "fill-white text-white"
@@ -778,43 +950,61 @@ function LightboxModal({
                 />
               </button>
             </div>
-            <p className="text-white text-sm font-semibold">
-              {likesCount.toLocaleString()} likes
+            <p className="text-white text-[13px] font-semibold">
+              {likesCount.toLocaleString()}{" "}
+              {likesCount === 1 ? "like" : "likes"}
             </p>
-            {post.createdAt && (
-              <p className="text-neutral-500 text-xs mt-0.5">
-                {getRelativeTime(post.createdAt)}
-              </p>
-            )}
           </div>
         </div>
       </div>
 
-      {/*Mobile layout- Instagram-style card*/}
+      {/*Mobile layout*/}
       <div
-        className="md:hidden flex flex-col bg-black w-full h-full overflow-y-auto"
+        className="md:hidden flex flex-col w-full h-full"
+        style={{ background: "#080808" }}
         onClick={(e) => e.stopPropagation()}
       >
         {/*Mobile header*/}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-800 shrink-0">
+        <div className="flex items-center justify-between px-4 py-3 shrink-0"
+          style={{
+            borderBottom: "1px solid rgba(255,255,255,0.06)",
+            background: "rgba(8,8,8,0.95)",
+            backdropFilter: "blur(10px)",
+          }}
+        >
           <div className="flex items-center gap-3">
-            <Avatar
-              src={post.author?.avatarUrl}
-              name={post.author?.username}
-              size={32}
-            />
+            <div
+              className="p-0.5 rounded-full"
+              style={{
+                background:
+                  "linear-gradient(135deg, #f09433, #dc2743, #bc1888)",
+              }}
+            >
+              <div className="p-[1.5px] rounded-full bg-[#080808]">
+                <Avatar
+                  src={post.author?.avatarUrl}
+                  name={post.author?.username}
+                  size={30}
+                />
+              </div>
+            </div>
             <div>
-              <p className="text-white text-sm font-semibold">
+              <p className="text-white text-[13px] font-semibold">
                 {post.author?.username ?? "User"}
               </p>
+              {post.createdAt && (
+                <p className="text-neutral-500 text-[11px]">
+                  {getRelativeTime(post.createdAt)}
+                </p>
+              )}
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button className="text-neutral-400">
-              <MoreHorizontal size={20} />
+          <div className="flex items-center gap-2">
+            <button className="text-neutral-500 p-1">
+              <MoreHorizontal size={18} />
             </button>
-            <button onClick={onClose} className="text-neutral-400">
-              <X size={20} />
+            <button onClick={onClose} className="text-neutral-500 p-1">
+              <X size={18} />
             </button>
           </div>
         </div>
@@ -825,59 +1015,58 @@ function LightboxModal({
         </div>
 
         {/*Mobile actions*/}
-        <div className="px-4 py-3 shrink-0">
-          <div className="flex items-center justify-between mb-2">
+        <div className="px-4 py-2.5 shrink-0"
+          style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+        >
+          <div className="flex items-center justify-between mb-1.5">
             <div className="flex items-center gap-4">
               <button
-                onClick={() => onLikeToggle(post.id)}
-                className="transition-transform active:scale-110"
+                onClick={() => handleLikeWithPop(post.id)}
+                style={{
+                  animation:
+                    heartPop && post.likedByMe ? "heartBeat 0.4s ease" : "none",
+                }}
               >
                 <Heart
-                  size={26}
+                  size={24}
                   className={
                     post.likedByMe ? "fill-red-500 text-red-500" : "text-white"
                   }
                 />
               </button>
               <button className="text-white">
-                <MessageCircle size={26} />
+                <MessageCircle size={24} />
               </button>
               <button className="text-white">
-                <Send size={24} />
+                <Send size={22} />
               </button>
             </div>
-            <button
-              onClick={() => onSaveToggle(post.id)}
-              className="transition-transform active:scale-110"
-            >
+            <button 
+                onClick={() => onSaveToggle(post.id)}
+                >
               <Bookmark
-                size={24}
+                size={22}
                 className={
                   post.savedByMe ? "fill-white text-white" : "text-white"
                 }
               />
             </button>
           </div>
-          <p className="text-white text-sm font-semibold">
+          <p className="text-white text-[13px] font-semibold">
             {likesCount.toLocaleString()} likes
           </p>
           {post.caption && (
-            <p className="text-white text-sm mt-1 leading-snug">
+            <p className="text-white text-[13px] mt-1 leading-snug">
               <span className="font-semibold mr-1">
                 {post.author?.username}
               </span>
-              <span className="text-neutral-200">{post.caption}</span>
-            </p>
-          )}
-          {post.createdAt && (
-            <p className="text-neutral-500 text-xs mt-1">
-              {getRelativeTime(post.createdAt)}
+              <span className="text-neutral-300">{post.caption}</span>
             </p>
           )}
         </div>
 
         {/*Mobile comments*/}
-        <div className="flex-1 border-t border-neutral-800">
+        <div className="flex-1 min-h-0 overflow-hidden">
           <CommentSection postId={post.id} userId={userId} />
         </div>
       </div>
@@ -890,10 +1079,12 @@ export default function ExplorePage() {
   const [posts, setPosts] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   const userId = session?.user?.id ?? "";
 
   useEffect(() => {
+    setMounted(true);
     const load = async () => {
       try {
         const res = await fetch(`${API_URL}/posts?limit=30`);
@@ -965,13 +1156,22 @@ export default function ExplorePage() {
   );
 
   return (
-    <main className="bg-black min-h-screen text-white">
-      <div className="max-w-160 md:max-w-225 lg:max-w-275 mx-auto">
+    <main className="min-h-screen text-white" style={{ background: "#000" }}>
+      <style>{`
+        @keyframes tileReveal {
+          from { opacity: 0; transform: scale(0.94); }
+          to { opacity: 1; transform: scale(1); }
+        }
+      `}</style>
+
+      <div className="mx-auto" style={{ maxWidth: "935px", padding: "0 0px" }}>
         {loading ? (
           <GridSkeleton />
         ) : posts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-28 gap-3 text-center">
-            <div className="w-16 h-16 rounded-full border border-neutral-700 flex items-center justify-center">
+          <div className="flex flex-col items-center justify-center py-32 gap-3 text-center">
+            <div className="w-16 h-16 rounded-full flex items-center justify-center mb-2"
+              style={{ border: "1px solid rgba(255,255,255,0.1)" }}
+            >
               <svg
                 className="w-7 h-7 text-neutral-600"
                 fill="none"
@@ -982,17 +1182,17 @@ export default function ExplorePage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803 7.5 7.5 0 0016.803 15.803z" />
               </svg>
             </div>
-            <p className="text-sm font-semibold">Nothing to explore yet</p>
-            <p className="text-neutral-500 text-xs">
+            <p className="text-white text-sm font-semibold">Nothing to explore yet</p>
+            <p className="text-neutral-600 text-xs">
               Posts will appear here once shared
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-0.5 sm:gap-1 md:gap-2 auto-rows-[1fr]">
+          <div className="grid grid-cols-3" style={{ gap: "3px" }}>
             {posts.map((post, index) => (
               <PostTile key={post.id} post={post} index={index}
-                onClick={() => setSelectedIndex(index)}
-              />
+                  onClick={() => setSelectedIndex(index)}
+                />
             ))}
           </div>
         )}
