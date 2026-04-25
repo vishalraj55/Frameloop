@@ -18,7 +18,9 @@ import {
   Trash2,
   Pencil,
   Flag,
+  Check,
 } from "lucide-react";
+import Link from "next/link";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -42,7 +44,7 @@ interface Comment {
 interface PostType {
   id: string;
   imageUrl: string;
-  likes: { id: string }[];
+  likes: { id: string; userId: string }[];
   likedByMe?: boolean;
   caption?: string;
   author?: Author;
@@ -238,12 +240,14 @@ function CommentSection({
   }, []);
 
   const handlePost = async () => {
-    if (!text.trim() || !session?.user) return;
+    if (!text.trim() || !userId) return;
     setPosting(true);
     try {
       const res = await fetch(`/api/posts/${postId}/comments`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.user?.token ?? ""}`,
+        },
         body: JSON.stringify({
           authorId: userId,
           text: text.trim(),
@@ -713,6 +717,7 @@ function LightboxModal({
   useEffect(() => {
     requestAnimationFrame(() => setVisible(true));
   }, []);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -843,7 +848,11 @@ function LightboxModal({
           <div className="flex items-center justify-between px-4 py-3.5 shrink-0"
             style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
           >
-            <div className="flex items-center gap-3">
+            <Link
+              href={`/profile/${post.author?.username}`}
+              className="flex items-center gap-3 group"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div
                 className="p-0.5 rounded-full"
                 style={{
@@ -860,7 +869,7 @@ function LightboxModal({
                 </div>
               </div>
               <div>
-                <p className="text-white text-[13px] font-semibold leading-tight">
+                <p className="text-white text-[13px] font-semibold leading-tight group-hover:underline">
                   {post.author?.username ?? "User"}
                 </p>
                 {post.createdAt && (
@@ -869,7 +878,7 @@ function LightboxModal({
                   </p>
                 )}
               </div>
-            </div>
+            </Link>
             <button className="text-neutral-500 hover:text-white transition-colors">
               <MoreHorizontal size={18} />
             </button>
@@ -932,8 +941,21 @@ function LightboxModal({
                 <button className="text-white hover:text-neutral-400 transition-colors">
                   <MessageCircle size={22} />
                 </button>
-                <button className="text-white hover:text-neutral-400 transition-colors">
-                  <Send size={20} />
+                <button
+                  onClick={() => {
+                    void navigator.clipboard.writeText(
+                      `${window.location.origin}/p/${post.id}`,
+                    );
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                  className="text-white hover:text-neutral-400 transition-colors"
+                >
+                  {copied ? (
+                    <Check size={20} className="text-green-400" />
+                  ) : (
+                    <Send size={20} />
+                  )}
                 </button>
               </div>
               <button
@@ -1037,13 +1059,19 @@ function LightboxModal({
               <button className="text-white">
                 <MessageCircle size={24} />
               </button>
-              <button className="text-white">
+              <button
+                onClick={() => {
+                  void navigator.clipboard.writeText(
+                    `${window.location.origin}/p/${post.id}`,
+                  );
+                }}
+                className="text-white">
                 <Send size={22} />
               </button>
             </div>
             <button 
-                onClick={() => onSaveToggle(post.id)}
-                >
+            onClick={() => onSaveToggle(post.id)}
+            >
               <Bookmark
                 size={22}
                 className={
@@ -1079,17 +1107,20 @@ export default function ExplorePage() {
   const [posts, setPosts] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const [mounted, setMounted] = useState(false);
 
   const userId = session?.user?.id ?? "";
 
   useEffect(() => {
-    setMounted(true);
+    if (session === undefined) return;
     const load = async () => {
       try {
-        const res = await fetch(`${API_URL}/posts?limit=30`);
+        const res = await fetch(`${API_URL}/posts?limit=30&userId=${userId}`);
         const data = (await res.json()) as PostType[];
-        setPosts(data);
+        const mapped = data.map((p) => ({
+          ...p,
+          likedByMe: p.likes.some((l) => l.userId === userId),
+        }));
+        setPosts(mapped);
       } catch (err) {
         console.error("Failed to fetch posts:", err);
       } finally {
@@ -1097,7 +1128,7 @@ export default function ExplorePage() {
       }
     };
     void load();
-  }, []);
+  }, [session, userId]);
 
   const handlePrev = useCallback(() => {
     setSelectedIndex((i) => (i !== null && i > 0 ? i - 1 : i));
@@ -1116,8 +1147,8 @@ export default function ExplorePage() {
                 ...p,
                 likedByMe: !p.likedByMe,
                 likes: p.likedByMe
-                  ? p.likes.filter((l) => l.id !== userId)
-                  : [...p.likes, { id: userId }],
+                  ? p.likes.filter((l) => l.userId !== userId)
+                  : [...p.likes, { id: userId, userId }],
               }
             : p,
         ),
@@ -1191,8 +1222,8 @@ export default function ExplorePage() {
           <div className="grid grid-cols-3" style={{ gap: "3px" }}>
             {posts.map((post, index) => (
               <PostTile key={post.id} post={post} index={index}
-                  onClick={() => setSelectedIndex(index)}
-                />
+                onClick={() => setSelectedIndex(index)}
+              />
             ))}
           </div>
         )}
