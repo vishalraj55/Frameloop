@@ -99,4 +99,14 @@ export class PostsService {
   async delete(id: string) {
     return this.prisma.post.delete({ where: { id } });
   }
+  async findByUser(userId: string) {
+    return this.prisma.post.findMany({
+      where: { authorId: userId },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        author: true,
+        likes: true,
+      },
+    });
+  }
 }

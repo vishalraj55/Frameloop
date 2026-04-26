@@ -81,4 +81,8 @@ export class PostsController {
   delete(@Param('id') id: string) {
     return this.postsService.delete(id);
   }
+  @Get('user/:userId')
+  getUserPosts(@Param('userId') userId: string) {
+    return this.postsService.findByUser(userId);
+  }
 }

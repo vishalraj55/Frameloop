@@ -64,14 +64,17 @@ interface NotifForm {
   emailDigest: boolean;
   pushEnabled: boolean;
 }
+type Theme = "dark" | "light" | "system";
+type FontSize = "sm" | "md" | "lg";
 
 interface AppearanceForm {
-  theme: "dark" | "light" | "system";
+  theme: Theme;
   language: string;
-  fontSize: "sm" | "md" | "lg";
+  fontSize: FontSize;
 }
 
-const PRONOUNS_OPTIONS = [
+
+const PRONOUNS = [
   "Prefer not to say",
   "he/him",
   "she/her",
@@ -79,15 +82,7 @@ const PRONOUNS_OPTIONS = [
   "he/they",
   "she/they",
 ];
-
-const GENDER_OPTIONS = [
-  "Prefer not to say",
-  "Male",
-  "Female",
-  "Non-binary",
-  "Custom",
-];
-
+const GENDERS = ["Prefer not to say", "Male", "Female", "Non-binary", "Custom"];
 const LANGUAGES = [
   "English",
   "Hindi",
@@ -98,47 +93,64 @@ const LANGUAGES = [
   "Portuguese",
 ];
 
-/* Reusable primitives */
-const Divider = () => <div className="h-px bg-[#1f1f1f] mx-4" />;
+const THEME_COLORS: Record<
+  Theme,
+  {
+    bg: string;
+    card: string;
+    border: string;
+    text: string;
+    sub: string;
+    input: string;
+  }
+> = {
+  dark: {
+    bg: "#000",
+    card: "#0d0d0d",
+    border: "#1f1f1f",
+    text: "#fff",
+    sub: "#666",
+    input: "#1a1a1a",
+  },
+  light: {
+    bg: "#f5f5f5",
+    card: "#fff",
+    border: "#e5e5e5",
+    text: "#111",
+    sub: "#888",
+    input: "#f0f0f0",
+  },
+  system: {
+    bg: "#000",
+    card: "#0d0d0d",
+    border: "#1f1f1f",
+    text: "#fff",
+    sub: "#666",
+    input: "#1a1a1a",
+  },
+};
 
-const Toggle = ({
+
+function Toggle({
   on,
   onChange,
 }: {
   on: boolean;
   onChange: (v: boolean) => void;
-}) => (
-  <button
-    onClick={() => onChange(!on)}
-    className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${
-      on ? "bg-[#0095f6]" : "bg-[#3a3a3a]"
-    }`}
-  >
-    <span
-      className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-200 ${
-        on ? "left-5.5" : "left-0.5"
-      }`}
-    />
-  </button>
-);
-
-const SectionCard = ({
-  children,
-}: {
-  children: React.ReactNode;
-}) => (
-  <div className="bg-[#0d0d0d] mx-4 rounded-2xl overflow-hidden border border-[#1f1f1f]">
-    {children}
-  </div>
-);
-
-const Label = ({ text }: { text: string }) => (
-  <p className="px-4 pt-5 pb-2 text-[11px] font-semibold text-[#5e5e5e] uppercase tracking-widest">
-    {text}
-  </p>
-);
-
-/* Main Page  */
+}) {
+  return (
+    <button
+      onClick={() => onChange(!on)}
+      style={{ background: on ? "#0095f6" : "#3a3a3a" }}
+      className="relative w-11 h-6 rounded-full transition-colors duration-200 shrink-0"
+    >
+      <span
+        className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all duration-200"
+        style={{ left: on ? "22px" : "2px" }}
+      />
+    </button>
+  );
+}
 export default function SettingsPage() {
   const { data: session, update, status } = useSession();
   const router = useRouter();
@@ -184,7 +196,7 @@ export default function SettingsPage() {
     pushEnabled: true,
   });
 
-  /* ── Appearance state ── */
+  /* Appearance state */
   const [appearance, setAppearance] = useState<AppearanceForm>({
     theme: "dark",
     language: "English",
@@ -199,14 +211,16 @@ export default function SettingsPage() {
   });
   const [showPw, setShowPw] = useState(false);
 
-  /* Fetch profile */
+  const c = THEME_COLORS[appearance.theme];
+
+  // Load profile 
   useEffect(() => {
     if (status === "loading") return;
     if (!session?.user?.username) {
       router.push("/login");
       return;
     }
-    const load = async () => {
+    (async () => {
       try {
         const res = await fetch(`/api/users/${session.user.username}`);
         if (!res.ok) return;
@@ -219,7 +233,11 @@ export default function SettingsPage() {
           pronouns: d.pronouns ?? "Prefer not to say",
           gender: d.gender ?? "Prefer not to say",
           customGender: d.customGender ?? "",
-          links: d.links ?? [],
+          links: Array.isArray(d.links)
+            ? d.links
+            : typeof d.links === "string"
+              ? JSON.parse(d.links)
+              : [],
         });
         if (d.avatarUrl) setAvatarPreview(d.avatarUrl);
         if (d.isPrivate !== undefined)
@@ -227,14 +245,16 @@ export default function SettingsPage() {
       } catch (e) {
         console.error(e);
       }
-    };
-    void load();
+    })();
   }, [session?.user?.username, status, router]);
 
-  /* Save handlers */
+  const flash = (msg: "success" | "error") => {
+    setSaveMsg(msg);
+    setTimeout(() => setSaveMsg("idle"), 2500);
+  };
+
   const saveProfile = async () => {
     setSaving(true);
-    setSaveMsg("idle");
     try {
       const fd = new FormData();
       fd.append("fullName", profile.fullName);
@@ -244,46 +264,49 @@ export default function SettingsPage() {
       fd.append("pronouns", profile.pronouns);
       fd.append(
         "gender",
-        profile.gender === "Custom" ? profile.customGender : profile.gender
+        profile.gender === "Custom" ? profile.customGender : profile.gender,
       );
       fd.append("links", JSON.stringify(profile.links));
       if (avatarFile) fd.append("avatar", avatarFile);
-
       const res = await fetch(`/api/users/${session?.user?.username}`, {
         method: "PATCH",
         body: fd,
       });
       if (!res.ok) throw new Error();
       await update({ username: profile.username });
-      setSaveMsg("success");
+      flash("success");
     } catch {
-      setSaveMsg("error");
+      flash("error");
     } finally {
       setSaving(false);
-      setTimeout(() => setSaveMsg("idle"), 2500);
     }
   };
 
   const savePrivacy = async () => {
     setSaving(true);
     try {
-      await fetch(`/api/users/${session?.user?.username}`, {
+      const fd = new FormData();
+      fd.append("isPrivate", String(privacy.isPrivate));
+      fd.append("showActivityStatus", String(privacy.showActivityStatus));
+      fd.append("allowStoryResharing", String(privacy.allowStoryResharing));
+      fd.append("allowTagging", String(privacy.allowTagging));
+      fd.append("allowDMs", privacy.allowDMs);
+      const res = await fetch(`/api/users/${session?.user?.username}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(privacy),
+        body: fd,
       });
-      setSaveMsg("success");
+      if (!res.ok) throw new Error();
+      flash("success");
     } catch {
-      setSaveMsg("error");
+      flash("error");
     } finally {
       setSaving(false);
-      setTimeout(() => setSaveMsg("idle"), 2500);
     }
   };
 
   const savePassword = async () => {
     if (passwords.next !== passwords.confirm) {
-      setSaveMsg("error");
+      flash("error");
       return;
     }
     setSaving(true);
@@ -296,176 +319,51 @@ export default function SettingsPage() {
           newPassword: passwords.next,
         }),
       });
-      setSaveMsg("success");
+      flash("success");
       setPasswords({ current: "", next: "", confirm: "" });
     } catch {
-      setSaveMsg("error");
+      flash("error");
     } finally {
       setSaving(false);
-      setTimeout(() => setSaveMsg("idle"), 2500);
     }
   };
 
-  /* ── Avatar helpers ── */
-  function handleAvatar(e: React.ChangeEvent<HTMLInputElement>) {
+  const handleAvatar = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setAvatarFile(file);
     setAvatarPreview(URL.createObjectURL(file));
-  }
+  };
 
-  /* ── Back button ── */
-  const back = () => setSection("home");
 
-  if (status === "loading") {
-    return (
-      <main className="min-h-screen flex items-center justify-center bg-[#080808]">
-        <div className="w-8 h-8 border-2 border-[#2a2a2a] border-t-white rounded-full animate-spin" />
-      </main>
-    );
-  }
+  const Divider = () => (
+    <div style={{ background: c.border, height: 1, margin: "0 16px" }} />
+  );
 
-  /* Homemenu list */
-  if (section === "home") {
-    const items: {
-      id: Section;
-      icon: React.ReactNode;
-      label: string;
-      sub: string;
-    }[] = [
-      {
-        id: "account",
-        icon: <User size={20} />,
-        label: "Account",
-        sub: "Profile, username, bio, links",
-      },
-      {
-        id: "privacy",
-        icon: <Lock size={20} />,
-        label: "Privacy",
-        sub: "Account visibility, DMs, tagging",
-      },
-      {
-        id: "notifications",
-        icon: <Bell size={20} />,
-        label: "Notifications",
-        sub: "Push, email, activity alerts",
-      },
-      {
-        id: "appearance",
-        icon: <Palette size={20} />,
-        label: "Appearance",
-        sub: "Theme, language, font size",
-      },
-      {
-        id: "security",
-        icon: <Shield size={20} />,
-        label: "Security",
-        sub: "Password, connected apps",
-      },
-    ];
-
-    return (
-      <main className="max-w-md mx-auto bg-black min-h-screen text-white pb-24">
-        {/* Top bar */}
-        <div className="sticky top-0 z-40 flex items-center justify-between px-4 py-3 bg-black border-b border-[#1a1a1a]">
-          <button onClick={() => router.back()} className="p-1">
-            <ChevronLeft size={24} className="text-white" />
-          </button>
-          <h1 className="text-[17px] font-semibold tracking-tight">Settings</h1>
-          <div className="w-8" />
-        </div>
-
-        {/* Avatar preview */}
-        <div className="flex flex-col items-center pt-8 pb-6">
-          <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-[#2a2a2a] mb-3">
-            {avatarPreview ? (
-              <Image
-                src={avatarPreview}
-                alt="avatar"
-                width={80}
-                height={80}
-                className="object-cover w-full h-full"
-              />
-            ) : (
-              <div className="w-full h-full bg-[#1a1a1a] flex items-center justify-center text-3xl text-white font-light">
-                {profile.username[0]?.toUpperCase()}
-              </div>
-            )}
-          </div>
-          <p className="text-[16px] font-semibold">{profile.fullName || profile.username}</p>
-          <p className="text-[13px] text-[#6e6e6e] mt-0.5">@{profile.username}</p>
-        </div>
-
-        {/* Menu */}
-        <Label text="Manage" />
-        <SectionCard>
-          {items.map((item, i) => (
-            <div key={item.id}>
-              <button
-                onClick={() => setSection(item.id)}
-                className="w-full flex items-center gap-4 px-4 py-4 active:bg-[#151515] transition-colors"
-              >
-                <div className="w-9 h-9 rounded-xl bg-[#1a1a1a] flex items-center justify-center text-[#8e8e8e] shrink-0">
-                  {item.icon}
-                </div>
-                <div className="flex-1 text-left">
-                  <p className="text-[15px] text-white font-medium">{item.label}</p>
-                  <p className="text-[12px] text-[#5e5e5e] mt-0.5">{item.sub}</p>
-                </div>
-                <ChevronRight size={16} className="text-[#3e3e3e]" />
-              </button>
-              {i < items.length - 1 && <Divider />}
-            </div>
-          ))}
-        </SectionCard>
-
-        {/* Danger + logout */}
-        <Label text="Account" />
-        <SectionCard>
-          <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
-            className="w-full flex items-center gap-4 px-4 py-4 active:bg-[#151515] transition-colors"
-          >
-            <div className="w-9 h-9 rounded-xl bg-[#1a1a1a] flex items-center justify-center shrink-0">
-              <LogOut size={20} className="text-[#8e8e8e]" />
-            </div>
-            <p className="text-[15px] text-white font-medium">Log out</p>
-          </button>
-          <Divider />
-          <button className="w-full flex items-center gap-4 px-4 py-4 active:bg-[#151515] transition-colors">
-            <div className="w-9 h-9 rounded-xl bg-[#1a1a1a] flex items-center justify-center shrink-0">
-              <Trash2 size={20} className="text-[#ed4956]" />
-            </div>
-            <p className="text-[15px] text-[#ed4956] font-medium">Delete account</p>
-          </button>
-        </SectionCard>
-      </main>
-    );
-  }
-
-  /*Shared top bar for sub-sections*/
-  const SubTopBar = ({ title, onSave }: { title: string; onSave?: () => void }) => (
-    <div className="sticky top-0 z-40 flex items-center justify-between px-4 py-3 bg-[#080808] border-b border-[#1a1a1a]">
-      <button onClick={back} className="p-1">
-        <ChevronLeft size={24} className="text-white" />
-      </button>
-      <h1 className="text-[17px] font-semibold tracking-tight">{title}</h1>
-      {onSave ? (
-        <button
-          onClick={onSave}
-          disabled={saving}
-          className="text-[#0095f6] text-[15px] font-semibold disabled:opacity-40"
-        >
-          {saving ? "…" : saveMsg === "success" ? "✓" : "Save"}
-        </button>
-      ) : (
-        <div className="w-10" />
-      )}
+  const Row = ({
+    label,
+    sub,
+    right,
+  }: {
+    label: string;
+    sub?: string;
+    right: React.ReactNode;
+  }) => (
+    <div className="flex items-center justify-between px-4 py-4">
+      <div className="flex-1 pr-4">
+        <p style={{ color: c.text }} className="text-[15px]">
+          {label}
+        </p>
+        {sub && (
+          <p style={{ color: c.sub }} className="text-[12px] mt-0.5">
+            {sub}
+          </p>
+        )}
+      </div>
+      {right}
     </div>
   );
 
-  /* Input field */
   const Field = ({
     label,
     value,
@@ -484,7 +382,10 @@ export default function SettingsPage() {
     multiline?: boolean;
   }) => (
     <div className="px-4 py-3">
-      <label className="block text-[11px] text-[#5e5e5e] uppercase tracking-widest mb-1.5">
+      <label
+        style={{ color: c.sub }}
+        className="block text-[11px] uppercase tracking-widest mb-1.5"
+      >
         {label}
       </label>
       {multiline ? (
@@ -494,7 +395,8 @@ export default function SettingsPage() {
           placeholder={placeholder}
           rows={3}
           maxLength={maxLength}
-          className="w-full bg-transparent text-white text-[15px] outline-none resize-none placeholder:text-[#3e3e3e]"
+          style={{ color: c.text, background: "transparent" }}
+          className="w-full text-[15px] outline-none resize-none placeholder:opacity-30"
         />
       ) : (
         <input
@@ -503,25 +405,269 @@ export default function SettingsPage() {
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           maxLength={maxLength}
-          className="w-full bg-transparent text-white text-[15px] outline-none placeholder:text-[#3e3e3e]"
+          style={{ color: c.text, background: "transparent" }}
+          className="w-full text-[15px] outline-none placeholder:opacity-30"
         />
       )}
       {maxLength && (
-        <p className="text-[11px] text-[#3e3e3e] text-right mt-1">
+        <p
+          style={{ color: c.sub }}
+          className="text-[11px] text-right mt-1 opacity-50"
+        >
           {value.length}/{maxLength}
         </p>
       )}
     </div>
   );
 
-  /* ACCOUNT */
-  if (section === "account") {
+  const Card = ({ children }: { children: React.ReactNode }) => (
+    <div
+      style={{ background: c.card, border: `1px solid ${c.border}` }}
+      className="mx-4 rounded-2xl overflow-hidden"
+    >
+      {children}
+    </div>
+  );
+
+  const SectionLabel = ({ text }: { text: string }) => (
+    <p
+      style={{ color: c.sub }}
+      className="px-4 pt-5 pb-2 text-[11px] font-semibold uppercase tracking-widest"
+    >
+      {text}
+    </p>
+  );
+
+  const SaveButton = ({ onPress }: { onPress: () => void }) => (
+    <div className="px-4 mt-6 pb-2">
+      <button
+        onClick={onPress}
+        disabled={saving}
+        className="w-full bg-[#0095f6] text-white text-[15px] font-semibold py-3.5 rounded-2xl disabled:opacity-50 flex items-center justify-center gap-2"
+      >
+        {saving ? (
+          <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+        ) : saveMsg === "success" ? (
+          <>
+            <Check size={18} /> Saved
+          </>
+        ) : saveMsg === "error" ? (
+          "Try again"
+        ) : (
+          "Save changes"
+        )}
+      </button>
+    </div>
+  );
+
+  const TopBar = ({
+    title,
+    onSave,
+  }: {
+    title: string;
+    onSave?: () => void;
+  }) => (
+    <div
+      style={{ background: c.bg, borderBottom: `1px solid ${c.border}` }}
+      className="sticky top-0 z-40 flex items-center justify-between px-4 py-3"
+    >
+      <button onClick={() => setSection("home")} className="p-1">
+        <ChevronLeft size={24} style={{ color: c.text }} />
+      </button>
+      <h1 style={{ color: c.text }} className="text-[17px] font-semibold">
+        {title}
+      </h1>
+      {onSave ? (
+        <button
+          onClick={onSave}
+          disabled={saving}
+          className="text-[#0095f6] text-[15px] font-semibold disabled:opacity-40"
+        >
+          {saving ? "…" : saveMsg === "success" ? "✓" : "Save"}
+        </button>
+      ) : (
+        <div className="w-10" />
+      )}
+    </div>
+  );
+
+  if (status === "loading")
     return (
-      <main className="max-w-md mx-auto bg-[#080808] min-h-screen text-white pb-24">
-        <SubTopBar title="Account" onSave={saveProfile} />
+      <main className="min-h-screen flex items-center justify-center bg-black">
+        <div className="w-7 h-7 border-2 border-neutral-800 border-t-white rounded-full animate-spin" />
+      </main>
+    );
+
+  /* Homemenu list */
+  if (section === "home") {
+    const items: {
+      id: Section;
+      icon: React.ReactNode;
+      label: string;
+      sub: string;
+    }[] = [
+      {
+        id: "account",
+        icon: <User size={18} />,
+        label: "Account",
+        sub: "Profile, username, bio",
+      },
+      {
+        id: "privacy",
+        icon: <Lock size={18} />,
+        label: "Privacy",
+        sub: "Visibility, DMs, tagging",
+      },
+      {
+        id: "notifications",
+        icon: <Bell size={18} />,
+        label: "Notifications",
+        sub: "Push, email alerts",
+      },
+      {
+        id: "appearance",
+        icon: <Palette size={18} />,
+        label: "Appearance",
+        sub: "Theme, language",
+      },
+      {
+        id: "security",
+        icon: <Shield size={18} />,
+        label: "Security",
+        sub: "Password, sessions",
+      },
+    ];
+
+    return (
+      <main
+        style={{ background: c.bg }}
+        className="max-w-md mx-auto min-h-screen pb-24"
+      >
+        {/* Top bar */}
+        <div
+          style={{ background: c.bg, borderBottom: `1px solid ${c.border}` }}
+          className="sticky top-0 z-40 flex items-center justify-between px-4 py-3"
+        >
+          <button onClick={() => router.back()} className="p-1">
+            <ChevronLeft size={24} style={{ color: c.text }} />
+          </button>
+          <h1 style={{ color: c.text }} className="text-[17px] font-semibold">
+            Settings
+          </h1>
+          <div className="w-8" />
+        </div>
+
+        {/* Avatar preview */}
+        <div className="flex flex-col items-center pt-8 pb-6">
+          <div
+            style={{ border: `2px solid ${c.border}` }}
+            className="w-20 h-20 rounded-full overflow-hidden mb-3"
+          >
+            {avatarPreview ? (
+              <Image
+                src={avatarPreview}
+                alt="avatar"
+                width={80}
+                height={80}
+                className="object-cover w-full h-full"
+              />
+            ) : (
+              <div
+                style={{ background: c.input, color: c.text }}
+                className="w-full h-full flex items-center justify-center text-3xl font-light"
+              >
+                {profile.username[0]?.toUpperCase()}
+              </div>
+            )}
+          </div>
+          <p style={{ color: c.text }} className="text-[16px] font-semibold">
+            {profile.fullName || profile.username}
+          </p>
+          <p style={{ color: c.sub }} className="text-[13px] mt-0.5">
+            @{profile.username}
+          </p>
+        </div>
+
+        {/* Menu */}
+        <SectionLabel text="Manage" />
+        <Card>
+          {items.map((item, i) => (
+            <div key={item.id}>
+              <button
+                onClick={() => setSection(item.id)}
+                className="w-full flex items-center gap-4 px-4 py-4 active:opacity-60 transition-opacity"
+              >
+                <div
+                  style={{ background: c.input, color: c.sub }}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                >
+                  {item.icon}
+                </div>
+                <div className="flex-1 text-left">
+                  <p
+                    style={{ color: c.text }}
+                    className="text-[15px] font-medium"
+                  >
+                    {item.label}
+                  </p>
+                  <p style={{ color: c.sub }} className="text-[12px] mt-0.5">
+                    {item.sub}
+                  </p>
+                </div>
+                <ChevronRight size={16} style={{ color: c.border }} />
+              </button>
+              {i < items.length - 1 && <Divider />}
+            </div>
+          ))}
+        </Card>
+
+        {/* account actions */}
+        <SectionLabel text="Account" />
+        <Card>
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="w-full flex items-center gap-4 px-4 py-4 active:opacity-60 transition-opacity"
+          >
+            <div
+              style={{ background: c.input }}
+              className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+            >
+              <LogOut size={18} style={{ color: c.sub }} />
+            </div>
+            <p style={{ color: c.text }} className="text-[15px] font-medium">
+              Log out
+            </p>
+          </button>
+          <Divider />
+          <button className="w-full flex items-center gap-4 px-4 py-4 active:opacity-60 transition-opacity">
+            <div
+              style={{ background: c.input }}
+              className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+            >
+              <Trash2 size={18} className="text-[#ed4956]" />
+            </div>
+            <p className="text-[15px] font-medium text-[#ed4956]">
+              Delete account
+            </p>
+          </button>
+        </Card>
+      </main>
+    );
+  }
+
+  if (section === "account")
+    return (
+      <main
+        style={{ background: c.bg }}
+        className="max-w-md mx-auto min-h-screen pb-24"
+      >
+        <TopBar title="Account" onSave={saveProfile} />
 
         {/* Avatar */}
-        <div className="flex flex-col items-center py-6 border-b border-[#1a1a1a]">
+        <div
+          style={{ borderBottom: `1px solid ${c.border}` }}
+          className="flex flex-col items-center py-6"
+        >
           <div
             className="relative w-24 h-24 rounded-full overflow-hidden cursor-pointer"
             onClick={() => fileInputRef.current?.click()}
@@ -529,7 +675,10 @@ export default function SettingsPage() {
             {avatarPreview ? (
               <Image src={avatarPreview} alt="avatar" fill className="object-cover" />
             ) : (
-              <div className="w-full h-full bg-[#1a1a1a] flex items-center justify-center text-4xl font-light">
+              <div
+                style={{ background: c.input, color: c.text }}
+                className="w-full h-full flex items-center justify-center text-4xl font-light"
+              >
                 {profile.username[0]?.toUpperCase()}
               </div>
             )}
@@ -537,7 +686,7 @@ export default function SettingsPage() {
               <Camera size={22} className="text-white" />
             </div>
           </div>
-          <div className="flex items-center gap-4 mt-3">
+          <div className="flex gap-4 mt-3">
             <button
               onClick={() => fileInputRef.current?.click()}
               className="text-[#0095f6] text-[14px] font-semibold"
@@ -565,9 +714,8 @@ export default function SettingsPage() {
           />
         </div>
 
-        {/* Fields */}
-        <Label text="Personal info" />
-        <SectionCard>
+        <SectionLabel text="Personal info" />
+        <Card>
           <Field
             label="Full name"
             value={profile.fullName}
@@ -591,9 +739,11 @@ export default function SettingsPage() {
             multiline
           />
           <Divider />
-          {/* Pronouns */}
           <div className="px-4 py-3">
-            <label className="block text-[11px] text-[#5e5e5e] uppercase tracking-widest mb-1.5">
+            <label
+              style={{ color: c.sub }}
+              className="block text-[11px] uppercase tracking-widest mb-1.5"
+            >
               Pronouns
             </label>
             <select
@@ -601,19 +751,22 @@ export default function SettingsPage() {
               onChange={(e) =>
                 setProfile((p) => ({ ...p, pronouns: e.target.value }))
               }
-              className="w-full bg-transparent text-white text-[15px] outline-none"
+              style={{ color: c.text, background: "transparent" }}
+              className="w-full text-[15px] outline-none"
             >
-              {PRONOUNS_OPTIONS.map((o) => (
-                <option key={o} value={o} className="bg-[#1a1a1a]">
+              {PRONOUNS.map((o) => (
+                <option key={o} value={o} style={{ background: c.card }}>
                   {o}
                 </option>
               ))}
             </select>
           </div>
           <Divider />
-          {/* Gender */}
           <div className="px-4 py-3">
-            <label className="block text-[11px] text-[#5e5e5e] uppercase tracking-widest mb-1.5">
+            <label
+              style={{ color: c.sub }}
+              className="block text-[11px] uppercase tracking-widest mb-1.5"
+            >
               Gender
             </label>
             <select
@@ -621,10 +774,11 @@ export default function SettingsPage() {
               onChange={(e) =>
                 setProfile((p) => ({ ...p, gender: e.target.value }))
               }
-              className="w-full bg-transparent text-white text-[15px] outline-none"
+              style={{ color: c.text, background: "transparent" }}
+              className="w-full text-[15px] outline-none"
             >
-              {GENDER_OPTIONS.map((o) => (
-                <option key={o} value={o} className="bg-[#1a1a1a]">
+              {GENDERS.map((o) => (
+                <option key={o} value={o} style={{ background: c.card }}>
                   {o}
                 </option>
               ))}
@@ -641,10 +795,10 @@ export default function SettingsPage() {
               />
             </>
           )}
-        </SectionCard>
+        </Card>
 
-        <Label text="Website & links" />
-        <SectionCard>
+        <SectionLabel text="Website & links" />
+        <Card>
           <Field
             label="Website"
             value={profile.website}
@@ -652,15 +806,21 @@ export default function SettingsPage() {
             placeholder="https://"
             type="url"
           />
-          <Divider />
-          {/* Links list */}
+          {profile.links.length > 0 && <Divider />}
           {profile.links.map((link, i) => (
             <div key={i}>
               <div className="flex items-center gap-3 px-4 py-3">
-                <LinkIcon size={16} className="text-[#5e5e5e] shrink-0" />
+                <LinkIcon
+                  size={15}
+                  style={{ color: c.sub }}
+                  className="shrink-0"
+                />
                 <div className="flex-1 min-w-0">
                   {link.title && (
-                    <p className="text-[13px] font-semibold text-white truncate">
+                    <p
+                      style={{ color: c.text }}
+                      className="text-[13px] font-semibold truncate"
+                    >
                       {link.title}
                     </p>
                   )}
@@ -675,7 +835,7 @@ export default function SettingsPage() {
                   }
                   className="p-1.5"
                 >
-                  <X size={16} className="text-[#ed4956]" />
+                  <X size={15} className="text-[#ed4956]" />
                 </button>
               </div>
               <Divider />
@@ -691,8 +851,13 @@ export default function SettingsPage() {
                   setNewLink((p) => ({ ...p, url: e.target.value }))
                 }
                 placeholder="https://"
-                className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-white text-[14px] outline-none placeholder:text-[#3e3e3e]"
                 autoFocus
+                style={{
+                  background: c.input,
+                  color: c.text,
+                  border: `1px solid ${c.border}`,
+                }}
+                className="w-full rounded-xl px-3 py-2.5 text-[14px] outline-none placeholder:opacity-30"
               />
               <input
                 type="text"
@@ -701,7 +866,12 @@ export default function SettingsPage() {
                   setNewLink((p) => ({ ...p, title: e.target.value }))
                 }
                 placeholder="Title (optional)"
-                className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-3 py-2.5 text-white text-[14px] outline-none placeholder:text-[#3e3e3e]"
+                style={{
+                  background: c.input,
+                  color: c.text,
+                  border: `1px solid ${c.border}`,
+                }}
+                className="w-full rounded-xl px-3 py-2.5 text-[14px] outline-none placeholder:opacity-30"
               />
               <div className="flex gap-2">
                 <button
@@ -721,7 +891,8 @@ export default function SettingsPage() {
                 </button>
                 <button
                   onClick={() => setShowAddLink(false)}
-                  className="flex-1 bg-[#1a1a1a] text-white text-[14px] font-semibold py-2.5 rounded-xl"
+                  style={{ background: c.input, color: c.text }}
+                  className="flex-1 text-[14px] font-semibold py-2.5 rounded-xl"
                 >
                   Cancel
                 </button>
@@ -730,412 +901,324 @@ export default function SettingsPage() {
           ) : (
             <button
               onClick={() => setShowAddLink(true)}
-              className="w-full flex items-center gap-3 px-4 py-3.5 active:bg-[#151515] transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-3.5 active:opacity-60 transition-opacity"
             >
-              <Plus size={18} className="text-[#0095f6]" />
+              <Plus size={17} className="text-[#0095f6]" />
               <span className="text-[15px] text-[#0095f6] font-semibold">
                 Add link
               </span>
             </button>
           )}
-        </SectionCard>
-
-        {saveMsg === "error" && (
-          <p className="text-[#ed4956] text-sm text-center mt-4">
-            Something went wrong. Please try again.
-          </p>
-        )}
-
-        <div className="px-4 mt-6">
-          <button
-            onClick={saveProfile}
-            disabled={saving}
-            className="w-full bg-[#0095f6] text-white text-[15px] font-semibold py-3.5 rounded-2xl disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {saving ? (
-              <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : saveMsg === "success" ? (
-              <>
-                <Check size={18} /> Saved
-              </>
-            ) : (
-              "Save changes"
-            )}
-          </button>
-        </div>
+        </Card>
+        <SaveButton onPress={saveProfile} />
       </main>
     );
-  }
 
-  /*PRIVACY*/
-  if (section === "privacy") {
-    const PrivRow = ({
-      label,
-      sub,
-      field,
-    }: {
-      label: string;
-      sub?: string;
-      field: keyof Pick<
-        PrivacyForm,
-        | "isPrivate"
-        | "showActivityStatus"
-        | "allowStoryResharing"
-        | "allowTagging"
-      >;
-    }) => (
-      <div className="px-4 py-4 flex items-center justify-between">
-        <div className="flex-1 pr-4">
-          <p className="text-[15px] text-white">{label}</p>
-          {sub && <p className="text-[12px] text-[#5e5e5e] mt-0.5">{sub}</p>}
-        </div>
-        <Toggle
-          on={privacy[field]}
-          onChange={(v) => setPrivacy((p) => ({ ...p, [field]: v }))}
-        />
-      </div>
-    );
-
+  if (section === "privacy")
     return (
-      <main className="max-w-md mx-auto bg-[#080808] min-h-screen text-white pb-24">
-        <SubTopBar title="Privacy" onSave={savePrivacy} />
+      <main
+        style={{ background: c.bg }}
+        className="max-w-md mx-auto min-h-screen pb-24"
+      >
+        <TopBar title="Privacy" onSave={savePrivacy} />
 
-        <Label text="Account" />
-        <SectionCard>
-          <div className="px-4 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-3 flex-1 pr-4">
-              {privacy.isPrivate ? (
-                <Lock size={18} className="text-[#5e5e5e] shrink-0" />
-              ) : (
-                <Globe size={18} className="text-[#5e5e5e] shrink-0" />
-              )}
-              <div>
-                <p className="text-[15px] text-white">Private account</p>
-                <p className="text-[12px] text-[#5e5e5e] mt-0.5">
-                  Only followers see your posts
-                </p>
-              </div>
-            </div>
-            <Toggle
-              on={privacy.isPrivate}
-              onChange={(v) => setPrivacy((p) => ({ ...p, isPrivate: v }))}
-            />
-          </div>
+        <SectionLabel text="Account" />
+        <Card>
+          <Row
+            label="Private account"
+            sub="Only followers see your posts"
+            right={
+              <Toggle
+                on={privacy.isPrivate}
+                onChange={(v) => setPrivacy((p) => ({ ...p, isPrivate: v }))}
+              />
+            }
+          />
           <Divider />
-          <PrivRow
+          <Row
             label="Activity status"
             sub="Show when you were last active"
-            field="showActivityStatus"
+            right={
+              <Toggle
+                on={privacy.showActivityStatus}
+                onChange={(v) =>
+                  setPrivacy((p) => ({ ...p, showActivityStatus: v }))
+                }
+              />
+            }
           />
           <Divider />
-          <PrivRow
-            label="Allow story resharing"
+          <Row
+            label="Story resharing"
             sub="Let others share your stories"
-            field="allowStoryResharing"
+            right={
+              <Toggle
+                on={privacy.allowStoryResharing}
+                onChange={(v) =>
+                  setPrivacy((p) => ({ ...p, allowStoryResharing: v }))
+                }
+              />
+            }
           />
           <Divider />
-          <PrivRow
+          <Row
             label="Allow tagging"
             sub="Let others tag you in posts"
-            field="allowTagging"
+            right={
+              <Toggle
+                on={privacy.allowTagging}
+                onChange={(v) => setPrivacy((p) => ({ ...p, allowTagging: v }))}
+              />
+            }
           />
-        </SectionCard>
+        </Card>
 
-        <Label text="Messages" />
-        <SectionCard>
-          <div className="px-4 py-4">
-            <p className="text-[15px] text-white mb-3">Who can send you DMs</p>
+        <SectionLabel text="Messages" />
+        <Card>
+          <div className="px-4 py-3">
+            <p
+              style={{ color: c.sub }}
+              className="text-[12px] uppercase tracking-widest mb-3"
+            >
+              Who can DM you
+            </p>
             {(["everyone", "followers", "none"] as const).map((opt, i, arr) => (
               <div key={opt}>
                 <button
                   onClick={() => setPrivacy((p) => ({ ...p, allowDMs: opt }))}
-                  className="w-full flex items-center justify-between py-2.5"
+                  className="w-full flex items-center justify-between py-3"
                 >
-                  <span className="text-[14px] text-[#c0c0c0] capitalize">
-                    {opt === "none" ? "No one" : opt.charAt(0).toUpperCase() + opt.slice(1)}
+                  <span style={{ color: c.text }} className="text-[15px]">
+                    {opt === "none" ? "No one" : opt[0].toUpperCase() + opt.slice(1)}
                   </span>
                   {privacy.allowDMs === opt && (
                     <Check size={16} className="text-[#0095f6]" />
                   )}
                 </button>
-                {i < arr.length - 1 && <div className="h-px bg-[#1f1f1f]" />}
+                {i < arr.length - 1 && <Divider />}
               </div>
             ))}
           </div>
-        </SectionCard>
-
-        <div className="px-4 mt-6">
-          <button
-            onClick={savePrivacy}
-            disabled={saving}
-            className="w-full bg-[#0095f6] text-white text-[15px] font-semibold py-3.5 rounded-2xl disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {saving ? (
-              <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : saveMsg === "success" ? (
-              <>
-                <Check size={18} /> Saved
-              </>
-            ) : (
-              "Save changes"
-            )}
-          </button>
-        </div>
+        </Card>
+        <SaveButton onPress={savePrivacy} />
       </main>
     );
-  }
 
   /* NOTIFICATIONS */
   if (section === "notifications") {
-    const NotifRow = ({
-      label,
-      sub,
-      field,
-    }: {
-      label: string;
-      sub?: string;
-      field: keyof NotifForm;
-    }) => (
-      <div className="px-4 py-4 flex items-center justify-between">
-        <div className="flex-1 pr-4">
-          <p className="text-[15px] text-white">{label}</p>
-          {sub && <p className="text-[12px] text-[#5e5e5e] mt-0.5">{sub}</p>}
-        </div>
-        <Toggle
-          on={notif[field]}
-          onChange={(v) => setNotif((p) => ({ ...p, [field]: v }))}
-        />
-      </div>
-    );
-
+    const rows: { label: string; sub: string; field: keyof NotifForm }[] = [
+      { label: "Likes", sub: "When someone likes your post", field: "likes" },
+      { label: "Comments", sub: "When someone comments", field: "comments" },
+      {
+        label: "New followers",
+        sub: "When someone follows you",
+        field: "follows",
+      },
+      {
+        label: "Mentions",
+        sub: "When someone mentions you",
+        field: "mentions",
+      },
+      {
+        label: "Stories",
+        sub: "When someone views your story",
+        field: "stories",
+      },
+      {
+        label: "Email digest",
+        sub: "Weekly summary of your activity",
+        field: "emailDigest",
+      },
+    ];
     return (
-      <main className="max-w-md mx-auto bg-[#080808] min-h-screen text-white pb-24">
-        <SubTopBar title="Notifications" />
-
-        <Label text="Push notifications" />
-        <SectionCard>
-          <NotifRow
+      <main
+        style={{ background: c.bg }}
+        className="max-w-md mx-auto min-h-screen pb-24"
+      >
+        <TopBar title="Notifications" />
+        <SectionLabel text="Push" />
+        <Card>
+          <Row
             label="Enable push notifications"
-            sub="Master toggle for all push alerts"
-            field="pushEnabled"
+            sub="Master toggle for all alerts"
+            right={
+              <Toggle
+                on={notif.pushEnabled}
+                onChange={(v) => setNotif((p) => ({ ...p, pushEnabled: v }))}
+              />
+            }
           />
-        </SectionCard>
-
-        <Label text="Activity" />
-        <SectionCard>
-          <NotifRow label="Likes" sub="When someone likes your post" field="likes" />
-          <Divider />
-          <NotifRow label="Comments" sub="When someone comments" field="comments" />
-          <Divider />
-          <NotifRow label="New followers" sub="When someone follows you" field="follows" />
-          <Divider />
-          <NotifRow label="Mentions" sub="When someone mentions you" field="mentions" />
-          <Divider />
-          <NotifRow label="Stories" sub="When someone views your story" field="stories" />
-        </SectionCard>
-
-        <Label text="Email" />
-        <SectionCard>
-          <NotifRow
-            label="Email digest"
-            sub="Weekly summary of your activity"
-            field="emailDigest"
-          />
-        </SectionCard>
-
-        <div className="px-4 mt-6">
-          <button
-            onClick={() => {
-              setSaveMsg("success");
-              setTimeout(() => setSaveMsg("idle"), 2000);
-            }}
-            className="w-full bg-[#0095f6] text-white text-[15px] font-semibold py-3.5 rounded-2xl flex items-center justify-center gap-2"
-          >
-            {saveMsg === "success" ? (
-              <>
-                <Check size={18} /> Saved
-              </>
-            ) : (
-              "Save changes"
-            )}
-          </button>
-        </div>
+        </Card>
+        <SectionLabel text="Activity" />
+        <Card>
+          {rows.map((r, i) => (
+            <div key={r.field}>
+              <Row
+                label={r.label}
+                sub={r.sub}
+                right={
+                  <Toggle
+                    on={notif[r.field]}
+                    onChange={(v) => setNotif((p) => ({ ...p, [r.field]: v }))}
+                  />
+                }
+              />
+              {i < rows.length - 1 && <Divider />}
+            </div>
+          ))}
+        </Card>
+        <SaveButton onPress={() => flash("success")} />
       </main>
     );
   }
 
-  /*APPEARANCE */
   if (section === "appearance") {
-    const themes: { id: AppearanceForm["theme"]; label: string; icon: React.ReactNode }[] = [
+    const themes: { id: Theme; label: string; icon: React.ReactNode }[] = [
       { id: "dark", label: "Dark", icon: <Moon size={18} /> },
       { id: "light", label: "Light", icon: <Sun size={18} /> },
       { id: "system", label: "System", icon: <Monitor size={18} /> },
     ];
-
-    const fontSizes: { id: AppearanceForm["fontSize"]; label: string }[] = [
+    const fontSizes: { id: FontSize; label: string }[] = [
       { id: "sm", label: "Small" },
       { id: "md", label: "Default" },
       { id: "lg", label: "Large" },
     ];
-
     return (
-      <main className="max-w-md mx-auto bg-[#080808] min-h-screen text-white pb-24">
-        <SubTopBar title="Appearance" />
+      <main
+        style={{ background: c.bg }}
+        className="max-w-md mx-auto min-h-screen pb-24"
+      >
+        <TopBar title="Appearance" />
 
-        <Label text="Theme" />
-        <SectionCard>
+        <SectionLabel text="Theme" />
+        <Card>
           <div className="p-4 flex gap-3">
             {themes.map((t) => (
               <button
                 key={t.id}
                 onClick={() => setAppearance((p) => ({ ...p, theme: t.id }))}
-                className={`flex-1 flex flex-col items-center gap-2 py-4 rounded-xl border transition-all ${
-                  appearance.theme === t.id
-                    ? "border-[#0095f6] bg-[#0095f6]/10"
-                    : "border-[#2a2a2a] bg-[#131313]"
-                }`}
+                style={{
+                  border: `1px solid ${appearance.theme === t.id ? "#0095f6" : c.border}`,
+                  background:
+                    appearance.theme === t.id ? "rgba(0,149,246,0.1)" : c.input,
+                }}
+                className="flex-1 flex flex-col items-center gap-2 py-4 rounded-xl transition-all"
               >
                 <span
-                  className={
-                    appearance.theme === t.id ? "text-[#0095f6]" : "text-[#6e6e6e]"
-                  }
+                  style={{
+                    color: appearance.theme === t.id ? "#0095f6" : c.sub,
+                  }}
                 >
                   {t.icon}
                 </span>
                 <span
-                  className={`text-[13px] font-medium ${
-                    appearance.theme === t.id ? "text-[#0095f6]" : "text-[#8e8e8e]"
-                  }`}
+                  style={{
+                    color: appearance.theme === t.id ? "#0095f6" : c.sub,
+                  }}
+                  className="text-[13px] font-medium"
                 >
                   {t.label}
                 </span>
               </button>
             ))}
           </div>
-        </SectionCard>
+        </Card>
 
-        <Label text="Language" />
-        <SectionCard>
-          <div className="px-4 py-3">
-            <label className="block text-[11px] text-[#5e5e5e] uppercase tracking-widest mb-1.5">
-              Language
-            </label>
-            <select
-              value={appearance.language}
-              onChange={(e) =>
-                setAppearance((p) => ({ ...p, language: e.target.value }))
-              }
-              className="w-full bg-transparent text-white text-[15px] outline-none"
-            >
-              {LANGUAGES.map((l) => (
-                <option key={l} value={l} className="bg-[#1a1a1a]">
-                  {l}
-                </option>
-              ))}
-            </select>
-          </div>
-        </SectionCard>
-
-        <Label text="Font size" />
-        <SectionCard>
+        <SectionLabel text="Font size" />
+        <Card>
           <div className="p-4 flex gap-3">
             {fontSizes.map((f) => (
               <button
                 key={f.id}
                 onClick={() => setAppearance((p) => ({ ...p, fontSize: f.id }))}
-                className={`flex-1 py-3 rounded-xl border text-[14px] font-medium transition-all ${
-                  appearance.fontSize === f.id
-                    ? "border-[#0095f6] bg-[#0095f6]/10 text-[#0095f6]"
-                    : "border-[#2a2a2a] bg-[#131313] text-[#8e8e8e]"
-                }`}
+                style={{
+                  border: `1px solid ${appearance.fontSize === f.id ? "#0095f6" : c.border}`,
+                  background:
+                    appearance.fontSize === f.id
+                      ? "rgba(0,149,246,0.1)"
+                      : c.input,
+                  color: appearance.fontSize === f.id ? "#0095f6" : c.sub,
+                }}
+                className="flex-1 py-3 rounded-xl text-[14px] font-medium transition-all"
               >
                 {f.label}
               </button>
             ))}
           </div>
-        </SectionCard>
+        </Card>
 
-        <div className="px-4 mt-6">
-          <button
-            onClick={() => {
-              setSaveMsg("success");
-              setTimeout(() => setSaveMsg("idle"), 2000);
-            }}
-            className="w-full bg-[#0095f6] text-white text-[15px] font-semibold py-3.5 rounded-2xl flex items-center justify-center gap-2"
-          >
-            {saveMsg === "success" ? (
-              <>
-                <Check size={18} /> Saved
-              </>
-            ) : (
-              "Save changes"
-            )}
-          </button>
-        </div>
+        <SectionLabel text="Language" />
+        <Card>
+          <div className="px-4 py-3">
+            <select
+              value={appearance.language}
+              onChange={(e) =>
+                setAppearance((p) => ({ ...p, language: e.target.value }))
+              }
+              style={{ color: c.text, background: "transparent" }}
+              className="w-full text-[15px] outline-none"
+            >
+              {LANGUAGES.map((l) => (
+                <option key={l} value={l} style={{ background: c.card }}>
+                  {l}
+                </option>
+              ))}
+            </select>
+          </div>
+        </Card>
+        <SaveButton onPress={() => flash("success")} />
       </main>
     );
   }
 
-  /*SECURITY*/
-  if (section === "security") {
-    return (
-      <main className="max-w-md mx-auto bg-[#080808] min-h-screen text-white pb-24">
-        <SubTopBar title="Security" onSave={savePassword} />
 
-        <Label text="Change password" />
-        <SectionCard>
-          {/* Current */}
-          <div className="px-4 py-3">
-            <label className="block text-[11px] text-[#5e5e5e] uppercase tracking-widest mb-1.5">
-              Current password
-            </label>
-            <div className="flex items-center gap-2">
-              <input
-                type={showPw ? "text" : "password"}
-                value={passwords.current}
-                onChange={(e) =>
-                  setPasswords((p) => ({ ...p, current: e.target.value }))
-                }
-                placeholder="••••••••"
-                className="flex-1 bg-transparent text-white text-[15px] outline-none placeholder:text-[#3e3e3e]"
-              />
-              <button onClick={() => setShowPw((s) => !s)} className="text-[#5e5e5e]">
-                {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
+  if (section === "security")
+    return (
+      <main
+        style={{ background: c.bg }}
+        className="max-w-md mx-auto min-h-screen pb-24"
+      >
+        <TopBar title="Security" onSave={savePassword} />
+
+        <SectionLabel text="Change password" />
+        <Card>
+          {[
+            { key: "current" as const, label: "Current password" },
+            { key: "next" as const, label: "New password" },
+            { key: "confirm" as const, label: "Confirm new password" },
+          ].map((f, i, arr) => (
+            <div key={f.key}>
+              <div className="px-4 py-3">
+                <label
+                  style={{ color: c.sub }}
+                  className="block text-[11px] uppercase tracking-widest mb-1.5"
+                >
+                  {f.label}
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type={showPw ? "text" : "password"}
+                    value={passwords[f.key]}
+                    onChange={(e) =>
+                      setPasswords((p) => ({ ...p, [f.key]: e.target.value }))
+                    }
+                    placeholder="••••••••"
+                    style={{ color: c.text, background: "transparent" }}
+                    className="flex-1 text-[15px] outline-none placeholder:opacity-30"
+                  />
+                  {f.key === "current" && (
+                    <button
+                      onClick={() => setShowPw((s) => !s)}
+                      style={{ color: c.sub }}
+                    >
+                      {showPw ? <EyeOff size={17} /> : <Eye size={17} />}
+                    </button>
+                  )}
+                </div>
+              </div>
+              {i < arr.length - 1 && <Divider />}
             </div>
-          </div>
-          <Divider />
-          {/* New */}
-          <div className="px-4 py-3">
-            <label className="block text-[11px] text-[#5e5e5e] uppercase tracking-widest mb-1.5">
-              New password
-            </label>
-            <input
-              type={showPw ? "text" : "password"}
-              value={passwords.next}
-              onChange={(e) =>
-                setPasswords((p) => ({ ...p, next: e.target.value }))
-              }
-              placeholder="••••••••"
-              className="w-full bg-transparent text-white text-[15px] outline-none placeholder:text-[#3e3e3e]"
-            />
-          </div>
-          <Divider />
-          {/* Confirm */}
-          <div className="px-4 py-3">
-            <label className="block text-[11px] text-[#5e5e5e] uppercase tracking-widest mb-1.5">
-              Confirm new password
-            </label>
-            <input
-              type={showPw ? "text" : "password"}
-              value={passwords.confirm}
-              onChange={(e) =>
-                setPasswords((p) => ({ ...p, confirm: e.target.value }))
-              }
-              placeholder="••••••••"
-              className="w-full bg-transparent text-white text-[15px] outline-none placeholder:text-[#3e3e3e]"
-            />
-          </div>
+          ))}
           {passwords.next &&
             passwords.confirm &&
             passwords.next !== passwords.confirm && (
@@ -1143,48 +1226,25 @@ export default function SettingsPage() {
                 Passwords do not match
               </p>
             )}
-        </SectionCard>
+        </Card>
 
-        <Label text="Sessions" />
-        <SectionCard>
-          <div className="px-4 py-4">
-            <p className="text-[15px] text-white">Active sessions</p>
-            <p className="text-[12px] text-[#5e5e5e] mt-0.5">
-              This device · Last active now
-            </p>
-          </div>
+        <SectionLabel text="Sessions" />
+        <Card>
+          <Row
+            label="Active sessions"
+            sub="This device · Last active now"
+            right={<Globe size={16} style={{ color: c.sub }} />}
+          />
           <Divider />
-          <button className="w-full px-4 py-4 text-left active:bg-[#151515]">
-            <p className="text-[15px] text-[#ed4956]">Log out all other devices</p>
+          <button className="w-full px-4 py-4 text-left active:opacity-60 transition-opacity">
+            <p className="text-[15px] text-[#ed4956]">
+              Log out all other devices
+            </p>
           </button>
-        </SectionCard>
-
-        {saveMsg === "error" && (
-          <p className="text-[#ed4956] text-sm text-center mt-4">
-            Passwords do not match or something went wrong.
-          </p>
-        )}
-
-        <div className="px-4 mt-6">
-          <button
-            onClick={savePassword}
-            disabled={saving || !passwords.current || !passwords.next}
-            className="w-full bg-[#0095f6] text-white text-[15px] font-semibold py-3.5 rounded-2xl disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {saving ? (
-              <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : saveMsg === "success" ? (
-              <>
-                <Check size={18} /> Updated
-              </>
-            ) : (
-              "Update password"
-            )}
-          </button>
-        </div>
+        </Card>
+        <SaveButton onPress={savePassword} />
       </main>
     );
-  }
 
   return null;
 }
