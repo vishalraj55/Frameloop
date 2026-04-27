@@ -32,14 +32,13 @@ export async function PATCH(
   { params }: { params: Promise<{ username: string }> }
 ) {
   const { username } = await params;
+  const auth = req.headers.get("Authorization");
   const formData = await req.formData();
-  const token = formData.get("token") as string;
-  formData.delete("token");
 
   const res = await fetch(`${process.env.API_URL}/users/${username}`, {
     method: "PATCH",
     headers: {
-      ...(token && { Authorization: `Bearer ${token}` }),
+      ...(auth && { Authorization: auth }),
     },
     body: formData,
   });

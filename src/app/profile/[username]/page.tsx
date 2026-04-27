@@ -157,10 +157,8 @@ export default function ProfilePage() {
   return (
     <div className="bg-black text-white min-h-screen">
       <div className="max-w-233.75 mx-auto">
-
         {/* Profile header */}
         <div className="flex items-center gap-5 px-4 pt-6 pb-4 md:gap-15 md:px-8 md:pt-10 md:pb-6">
-
           {/* Avatar */}
           <Link href={profile.hasActiveStory ? `/story/${profile.username}` : "#"} className="shrink-0">
             <div
@@ -191,32 +189,13 @@ export default function ProfilePage() {
 
           {/* Stats */}
           <div className="flex-1 min-w-0">
-            <div className="flex flex-col gap-3 mb-4 md:flex-row md:items-center md:gap-5">
+            <div className="mb-4">
               <h2 className="text-xl md:text-[26px] font-light tracking-tight truncate">
                 {profile.username}
               </h2>
-
-              {isOwnProfile ? (
-                <Link
-                  href="/settings/profile"
-                  className="inline-flex items-center justify-center bg-[#1c1c1c] border border-[#363636] rounded-lg py-1.75 px-4 text-[13px] md:text-sm font-semibold hover:bg-[#262626] transition-colors"
-                >
-                  Edit profile
-                </Link>
-              ) : (
-                <button
-                  onClick={() => void handleFollow()}
-                  onMouseEnter={() => setFollowHovered(true)}
-                  onMouseLeave={() => setFollowHovered(false)}
-                  disabled={followLoading}
-                  className={`inline-flex items-center justify-center rounded-lg py-1.75 px-4 text-[13px] md:text-sm font-semibold transition-colors duration-150 ${followButtonClass()}`}
-                >
-                  {followButtonLabel()}
-                </button>
-              )}
             </div>
 
-            <div className="flex justify-around md:justify-start md:gap-10">
+            <div className="flex justify-around md:justify-start md:gap-10 mb-4">
               <div className="text-center md:text-left">
                 <span className="block md:inline text-[15px] font-semibold">
                   {profile.posts.length}
@@ -258,6 +237,27 @@ export default function ProfilePage() {
                 <p className="mt-1 text-[14px] text-[#f5f5f5] whitespace-pre-line leading-snug">
                   {profile.bio}
                 </p>
+              )}
+            </div>
+            {/* Edit / follow button */}
+            <div className="flex">
+              {isOwnProfile ? (
+                <Link
+                  href="/settings/profile"
+                  className="inline-flex items-center justify-center bg-[#1c1c1c] border border-[#363636] rounded-lg py-1.75 px-8 text-[13px] md:text-sm font-semibold hover:bg-[#262626] transition-colors"
+                >
+                  Edit profile
+                </Link>
+              ) : (
+                <button
+                  onClick={() => void handleFollow()}
+                  onMouseEnter={() => setFollowHovered(true)}
+                  onMouseLeave={() => setFollowHovered(false)}
+                  disabled={followLoading}
+                  className={`inline-flex items-center justify-center rounded-lg py-1.75 px-4 text-[13px] md:text-sm font-semibold transition-colors duration-150 ${followButtonClass()}`}
+                >
+                  {followButtonLabel()}
+                </button>
               )}
             </div>
           </div>
@@ -313,7 +313,7 @@ export default function ProfilePage() {
           )}
         </div>
 
-       {/* Posts grid */}
+        {/* Posts grid */}
         {activeTab === "posts" && (
           <div className="grid grid-cols-3 gap-0.75">
             {profile.posts.length === 0 ? (

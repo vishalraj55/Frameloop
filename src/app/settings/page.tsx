@@ -213,7 +213,7 @@ export default function SettingsPage() {
 
   const c = THEME_COLORS[appearance.theme];
 
-  // Load profile 
+  // Load profile
   useEffect(() => {
     if (status === "loading") return;
     if (!session?.user?.username) {
@@ -270,6 +270,9 @@ export default function SettingsPage() {
       if (avatarFile) fd.append("avatar", avatarFile);
       const res = await fetch(`/api/users/${session?.user?.username}`, {
         method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${session?.user?.token}`,
+        },
         body: fd,
       });
       if (!res.ok) throw new Error();
@@ -293,6 +296,9 @@ export default function SettingsPage() {
       fd.append("allowDMs", privacy.allowDMs);
       const res = await fetch(`/api/users/${session?.user?.username}`, {
         method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${session?.user?.token}`,
+        },
         body: fd,
       });
       if (!res.ok) throw new Error();
@@ -334,7 +340,7 @@ export default function SettingsPage() {
     setAvatarFile(file);
     setAvatarPreview(URL.createObjectURL(file));
   };
-
+  
 
   const Divider = () => (
     <div style={{ background: c.border, height: 1, margin: "0 16px" }} />
@@ -1170,7 +1176,6 @@ export default function SettingsPage() {
       </main>
     );
   }
-
 
   if (section === "security")
     return (

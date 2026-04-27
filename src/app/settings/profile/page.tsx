@@ -163,6 +163,7 @@ export default function EditProfilePage() {
       const res = await fetch(`/api/users/${session?.user?.username}`, {
         method: "PATCH",
         headers: {
+          Authorization: `Bearer ${session?.user?.token ?? ""}`,
         },
         body: formData,
       });
@@ -646,7 +647,9 @@ export default function EditProfilePage() {
                         {link.title}
                       </p>
                     )}
-                    <p className="text-[13px] text-[#0095f6] truncate">{link.url}</p>
+                    <p className="text-[13px] text-[#0095f6] truncate">
+                      {link.url}
+                    </p>
                   </div>
                   <button
                     onClick={() => removeLink(i)}
