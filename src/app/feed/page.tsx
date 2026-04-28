@@ -19,7 +19,6 @@ interface PostType {
   createdAt?: string;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const PAGE_SIZE = 10;
 
 function PostSkeleton() {
@@ -90,12 +89,20 @@ function RefreshIndicator({ progress }: { progress: number }) {
         style={{ transform: `rotate(-90deg) scale(${0.6 + progress * 0.004})` }}
       >
         <circle
-          cx={size / 2} cy={size / 2} r={radius}
-          fill="none" stroke="#262626" strokeWidth={2}
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="#262626"
+          strokeWidth={2}
         />
         <circle
-          cx={size / 2}cy={size / 2}r={radius}
-          fill="none" stroke="#f0f0f0" strokeWidth={2}
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="#f0f0f0"
+          strokeWidth={2}
           strokeDasharray={`${dash} ${circumference}`}
           strokeLinecap="round"
         />
@@ -147,7 +154,6 @@ export default function FeedPage() {
   const [pullProgress, setPullProgress] = useState(0);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
   const touchStartY = useRef(0);
   const pulling = useRef(false);
 
@@ -158,11 +164,7 @@ export default function FeedPage() {
         params.set("limit", String(PAGE_SIZE));
         if (cursorParam) params.set("cursor", cursorParam);
 
-        const res = await fetch(`${API_URL}/posts?${params.toString()}`, {
-          headers: {
-            Authorization: `Bearer ${session?.user?.token ?? ""}`,
-          },
-        });
+        const res = await fetch(`/api/posts?${params.toString()}`);
         const data = (await res.json()) as PostType[];
 
         setPosts((prev) => {
@@ -180,7 +182,7 @@ export default function FeedPage() {
         console.error("Failed to fetch posts:", err);
       }
     },
-    [session],
+    [],
   );
 
   useEffect(() => {
@@ -195,23 +197,24 @@ export default function FeedPage() {
   useEffect(() => {
     if (!sentinelRef.current) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting && hasMore && !loadingMore && !initialLoading) {
-          setLoadingMore(true);
-          void fetchPosts(cursor).finally(() => setLoadingMore(false));
-        }
-      },
-      { rootMargin: "200px" },
-    );
+    const observer = new IntersectionObserver((entries) => {
+      if (
+        entries[0]?.isIntersecting &&
+        hasMore &&
+        !loadingMore &&
+        !initialLoading
+      ) {
+        setLoadingMore(true);
+        void fetchPosts(cursor).finally(() => setLoadingMore(false));
+      }
+    });
 
     observer.observe(sentinelRef.current);
     return () => observer.disconnect();
   }, [fetchPosts, hasMore, loadingMore, initialLoading, cursor]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    const el = scrollRef.current;
-    if (el && el.scrollTop === 0) {
+    if (window.scrollY === 0) {
       touchStartY.current = e.touches[0]!.clientY;
       pulling.current = true;
     }
@@ -243,8 +246,7 @@ export default function FeedPage() {
 
   return (
     <div
-      ref={scrollRef}
-      className="h-screen overflow-y-auto bg-black [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+      className="min-h-screen bg-black"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={() => void handleTouchEnd()}
@@ -277,7 +279,9 @@ export default function FeedPage() {
                   imageUrl={post.imageUrl}
                   caption={post.caption ?? ""}
                   likes={post.likes.length}
-                  isLiked={post.likes.some((l) => l.userId === session?.user?.id)}
+                  isLiked={post.likes.some(
+                    (l) => l.userId === session?.user?.id,
+                  )}
                   createdAt={post.createdAt ?? ""}
                   isFollowing={post.author.isFollowing ?? false}
                   priority={index === 0}

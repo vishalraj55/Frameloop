@@ -1,16 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
+const API = process.env.API_URL;
+
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const auth = req.headers.get("Authorization");
-  const res = await fetch(`${process.env.API_URL}/posts/${id}`, {
+  const res = await fetch(`${API}/posts/${id}`, {
     method: "DELETE",
-    headers: {
-      ...(auth && { Authorization: auth }),
-    },
   });
 
   if (!res.ok) {

@@ -63,7 +63,7 @@ model Like {
   userId String
   postId String
   user   User   @relation(fields: [userId], references: [id])
-  post   Post   @relation(fields: [postId], references: [id])
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@unique([userId, postId])
 }
@@ -76,7 +76,7 @@ model Comment {
   authorId  String
   parentId  String?
 
-  post    Post     @relation(fields: [postId], references: [id])
+  post    Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
   author  User     @relation(fields: [authorId], references: [id])
   parent  Comment? @relation("Replies", fields: [parentId], references: [id])
   replies Comment[] @relation("Replies")

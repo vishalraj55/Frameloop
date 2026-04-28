@@ -111,8 +111,14 @@ function CommentInput({
           type="text"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") onPost(); }}
-          placeholder={replyingTo ? `Reply to @${replyingTo.username}...` : "Add a comment..."}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") onPost();
+          }}
+          placeholder={
+            replyingTo
+              ? `Reply to @${replyingTo.username}...`
+              : "Add a comment..."
+          }
           className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-neutral-500"
         />
         <button
@@ -157,7 +163,6 @@ export default function CommentSheet({
 
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
 
   const userId = session?.user?.id ?? "";
 
@@ -181,7 +186,8 @@ export default function CommentSheet({
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      const target = e.target as HTMLElement;
+      if (!target.closest("[data-menu]")) {
         setMenuOpenId(null);
       }
     };
@@ -227,40 +233,57 @@ export default function CommentSheet({
 
   const handleDelete = async (commentId: string, parentId?: string) => {
     setMenuOpenId(null);
+    if (parentId) {
+      setComments((prev) =>
+        prev.map((c) =>
+          c.id === parentId
+            ? {
+                ...c,
+                replies: (c.replies ?? []).filter((r) => r.id !== commentId),
+              }
+            : c,
+        ),
+      );
+    } else {
+      setComments((prev) => prev.filter((c) => c.id !== commentId));
+    }
+
     try {
-      await fetch(`/api/posts/${postId}/comments`, {
+      const res = await fetch(`/api/posts/${postId}/comments`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ commentId, userId }),
       });
-      if (parentId) {
-        setComments((prev) =>
-          prev.map((c) =>
-            c.id === parentId
-              ? {
-                  ...c,
-                  replies: (c.replies ?? []).filter((r) => r.id !== commentId),
-                }
-              : c,
-          ),
-        );
-      } else {
-        setComments((prev) => prev.filter((c) => c.id !== commentId));
+      console.log("DELETE response status:", res.status);
+      if (!res.ok) {
+        // Rollback on failure
+        const rollback = await fetch(`/api/posts/${postId}/comments`);
+        const data = (await rollback.json()) as Comment[];
+        setComments(data);
       }
     } catch (err) {
       console.error(err);
+      const rollback = await fetch(`/api/posts/${postId}/comments`);
+      const data = (await rollback.json()) as Comment[];
+      setComments(data);
     }
   };
 
   const handleLike = async (commentId: string, parentId?: string) => {
     const update = (c: Comment): Comment =>
       c.id === commentId
-        ? { ...c, likedByMe: !c.likedByMe, likesCount: c.likedByMe ? c.likesCount - 1 : c.likesCount + 1 }
+        ? {
+            ...c,
+            likedByMe: !c.likedByMe,
+            likesCount: c.likedByMe ? c.likesCount - 1 : c.likesCount + 1,
+          }
         : c;
     setComments((prev) =>
       prev.map((c) =>
         parentId
-          ? c.id === parentId ? { ...c, replies: (c.replies ?? []).map(update) } : c
+          ? c.id === parentId
+            ? { ...c, replies: (c.replies ?? []).map(update) }
+            : c
           : update(c),
       ),
     );
@@ -275,7 +298,9 @@ export default function CommentSheet({
       setComments((prev) =>
         prev.map((c) =>
           parentId
-            ? c.id === parentId ? { ...c, replies: (c.replies ?? []).map(update) } : c
+            ? c.id === parentId
+              ? { ...c, replies: (c.replies ?? []).map(update) }
+              : c
             : update(c),
         ),
       );
@@ -291,11 +316,14 @@ export default function CommentSheet({
         body: JSON.stringify({ commentId, action: "edit", text: editText.trim() }),
       });
       const updated = (await res.json()) as Comment;
-      const replace = (c: Comment) => c.id === commentId ? { ...c, text: updated.text } : c;
+      const replace = (c: Comment) =>
+        c.id === commentId ? { ...c, text: updated.text } : c;
       setComments((prev) =>
         prev.map((c) =>
           parentId
-            ? c.id === parentId ? { ...c, replies: (c.replies ?? []).map(replace) } : c
+            ? c.id === parentId
+              ? { ...c, replies: (c.replies ?? []).map(replace) }
+              : c
             : replace(c),
         ),
       );
@@ -388,7 +416,7 @@ export default function CommentSheet({
               comment.likedByMe ? "fill-red-500 text-red-500" : "text-neutral-400 hover:text-neutral-200"
             } />
           </button>
-          <div className="relative" ref={menuRef}>
+          <div className="relative" data-menu>
             <button
               onClick={() => setMenuOpenId(menuOpenId === comment.id ? null : comment.id)}
               className="text-neutral-500 hover:text-white transition-colors p-1 rounded-full hover:bg-neutral-700 opacity-0 group-hover:opacity-100"
@@ -431,16 +459,16 @@ export default function CommentSheet({
 
   const renderList = () => {
     if (loading) return (
-      <div className="flex justify-center py-8">
-        <div className="w-5 h-5 border-2 border-neutral-700 border-t-white rounded-full animate-spin" />
-      </div>
-    );
+        <div className="flex justify-center py-8">
+          <div className="w-5 h-5 border-2 border-neutral-700 border-t-white rounded-full animate-spin" />
+        </div>
+      );
     if (comments.length === 0) return (
-      <div className="flex flex-col items-center justify-center py-12 gap-2">
-        <p className="text-white text-sm font-semibold">No comments yet</p>
-        <p className="text-neutral-500 text-xs">Start the conversation</p>
-      </div>
-    );
+        <div className="flex flex-col items-center justify-center py-12 gap-2">
+          <p className="text-white text-sm font-semibold">No comments yet</p>
+          <p className="text-neutral-500 text-xs">Start the conversation</p>
+        </div>
+      );
     return (
       <>
         {comments.map((comment) => (
