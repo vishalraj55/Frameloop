@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import {
   X,
   ChevronLeft,
@@ -129,16 +130,27 @@ function PostTile({
   post,
   index,
   onClick,
+  onMobileClick,
 }: {
   post: PostType;
   index: number;
   onClick: () => void;
+  onMobileClick: () => void;
 }) {
   const [hovered, setHovered] = useState(false);
   const isLarge = index % 7 === 0;
+
+  const handleClick = () => {
+    if (window.innerWidth < 768) {
+      onMobileClick();
+    } else {
+      onClick();
+    }
+  };
+
   return (
     <button
-      onClick={onClick}
+      onClick={handleClick}
       className={`relative block overflow-hidden group ${
         isLarge ? "col-span-2 row-span-2" : ""
       } aspect-square`}
@@ -175,7 +187,6 @@ function PostTile({
           </div>
         </div>
       </div>
-
       <div
         className="absolute inset-x-0 top-0 h-0.5"
         style={{
@@ -714,10 +725,10 @@ function LightboxModal({
   const post = posts[currentIndex];
   const [visible, setVisible] = useState(false);
   const [heartPop, setHeartPop] = useState(false);
+  const [copied, setCopied] = useState(false);
   useEffect(() => {
     requestAnimationFrame(() => setVisible(true));
   }, []);
-  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -821,7 +832,7 @@ function LightboxModal({
 
       {/*Desktop layout*/}
       <div
-        className="hidden md:flex overflow-hidden w-full mx-20"
+        className="flex overflow-hidden w-full mx-20"
         style={{
           maxWidth: "960px",
           height: "min(88vh, 680px)",
@@ -979,131 +990,13 @@ function LightboxModal({
           </div>
         </div>
       </div>
-
-      {/*Mobile layout*/}
-      <div
-        className="md:hidden flex flex-col w-full h-full"
-        style={{ background: "#080808" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/*Mobile header*/}
-        <div className="flex items-center justify-between px-4 py-3 shrink-0"
-          style={{
-            borderBottom: "1px solid rgba(255,255,255,0.06)",
-            background: "rgba(8,8,8,0.95)",
-            backdropFilter: "blur(10px)",
-          }}
-        >
-          <div className="flex items-center gap-3">
-            <div
-              className="p-0.5 rounded-full"
-              style={{
-                background:
-                  "linear-gradient(135deg, #f09433, #dc2743, #bc1888)",
-              }}
-            >
-              <div className="p-[1.5px] rounded-full bg-[#080808]">
-                <Avatar
-                  src={post.author?.avatarUrl}
-                  name={post.author?.username}
-                  size={30}
-                />
-              </div>
-            </div>
-            <div>
-              <p className="text-white text-[13px] font-semibold">
-                {post.author?.username ?? "User"}
-              </p>
-              {post.createdAt && (
-                <p className="text-neutral-500 text-[11px]">
-                  {getRelativeTime(post.createdAt)}
-                </p>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button className="text-neutral-500 p-1">
-              <MoreHorizontal size={18} />
-            </button>
-            <button onClick={onClose} className="text-neutral-500 p-1">
-              <X size={18} />
-            </button>
-          </div>
-        </div>
-
-        {/*Mobile image*/}
-        <div className="relative w-full aspect-square bg-black shrink-0">
-          <Image src={post.imageUrl} alt="" fill className="object-cover" />
-        </div>
-
-        {/*Mobile actions*/}
-        <div className="px-4 py-2.5 shrink-0"
-          style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
-        >
-          <div className="flex items-center justify-between mb-1.5">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => handleLikeWithPop(post.id)}
-                style={{
-                  animation:
-                    heartPop && post.likedByMe ? "heartBeat 0.4s ease" : "none",
-                }}
-              >
-                <Heart
-                  size={24}
-                  className={
-                    post.likedByMe ? "fill-red-500 text-red-500" : "text-white"
-                  }
-                />
-              </button>
-              <button className="text-white">
-                <MessageCircle size={24} />
-              </button>
-              <button
-                onClick={() => {
-                  void navigator.clipboard.writeText(
-                    `${window.location.origin}/p/${post.id}`,
-                  );
-                }}
-                className="text-white">
-                <Send size={22} />
-              </button>
-            </div>
-            <button 
-            onClick={() => onSaveToggle(post.id)}
-            >
-              <Bookmark
-                size={22}
-                className={
-                  post.savedByMe ? "fill-white text-white" : "text-white"
-                }
-              />
-            </button>
-          </div>
-          <p className="text-white text-[13px] font-semibold">
-            {likesCount.toLocaleString()} likes
-          </p>
-          {post.caption && (
-            <p className="text-white text-[13px] mt-1 leading-snug">
-              <span className="font-semibold mr-1">
-                {post.author?.username}
-              </span>
-              <span className="text-neutral-300">{post.caption}</span>
-            </p>
-          )}
-        </div>
-
-        {/*Mobile comments*/}
-        <div className="flex-1 min-h-0 overflow-hidden">
-          <CommentSection postId={post.id} userId={userId} />
-        </div>
-      </div>
     </div>
   );
 }
 
 export default function ExplorePage() {
   const { data: session } = useSession();
+  const router = useRouter();
   const [posts, setPosts] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
@@ -1223,11 +1116,11 @@ export default function ExplorePage() {
             {posts.map((post, index) => (
               <PostTile key={post.id} post={post} index={index}
                 onClick={() => setSelectedIndex(index)}
+                onMobileClick={() => router.push(`/post/${post.id}?source=explore`)}
               />
             ))}
           </div>
         )}
-
       </div>
       {selectedIndex !== null && (
         <LightboxModal

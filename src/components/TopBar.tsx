@@ -6,7 +6,6 @@ import { useSession, signOut } from "next-auth/react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import {
   Settings,
-  LogOut,
   Bell,
   Heart,
   MessageCircle,
@@ -376,7 +375,7 @@ export default function TopBar() {
                 className="p-2 rounded-full hover:bg-[#1a1a1a] transition"
                 aria-label="Sign out"
               >
-                <LogOut size={22} strokeWidth={1.8} className="text-white" />
+                {/* <LogOut size={22} strokeWidth={1.8} className="text-white" /> */}
               </button>
             ) : (
               <Link

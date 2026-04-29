@@ -407,7 +407,6 @@ export default function EditProfilePage() {
           <ChevronRight size={16} className="text-[#4e4e4e]" />
         </button>
       </div>
-
       {/* ── Privacy ── */}
       <SectionHeader title="Privacy" />
 
@@ -462,10 +461,10 @@ export default function EditProfilePage() {
       {/* ── Personal details ── */}
       <SectionHeader title="Personal details" />
 
-      <div className="bg-[#121212] mx-4 rounded-2xl overflow-hidden border border-[#262626]">
+      <div className="px-4 py-3 bg-[#121212] mx-4 rounded-2xl overflow-hidden border border-[#262626]">
         <button
           onClick={() => setActiveSheet("gender")}
-          className="w-full px-4 py-3.5 flex items-center justify-between active:bg-[#1e1e1e]"
+          className="w-full flex items-center justify-between active:bg-[#1e1e1e]"
         >
           <div className="text-left">
             <p className="text-[15px] text-white">Gender</p>
@@ -484,7 +483,7 @@ export default function EditProfilePage() {
       {/* ── Danger zone ── */}
       <SectionHeader title="Account" />
 
-      <div className="bg-[#121212] mx-4 rounded-2xl overflow-hidden border border-[#262626]">
+      <div className="px-4 py-3 bg-[#121212] mx-4 rounded-2xl overflow-hidden border border-[#262626]">
         <button className="w-full px-4 py-3.5 text-left active:bg-[#1e1e1e]">
           <p className="text-[15px] text-[#ed4956]">Deactivate account</p>
         </button>

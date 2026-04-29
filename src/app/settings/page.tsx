@@ -73,6 +73,14 @@ interface AppearanceForm {
   fontSize: FontSize;
 }
 
+type ThemeColors = {
+  bg: string;
+  card: string;
+  border: string;
+  text: string;
+  sub: string;
+  input: string;
+};
 
 const PRONOUNS = [
   "Prefer not to say",
@@ -93,17 +101,7 @@ const LANGUAGES = [
   "Portuguese",
 ];
 
-const THEME_COLORS: Record<
-  Theme,
-  {
-    bg: string;
-    card: string;
-    border: string;
-    text: string;
-    sub: string;
-    input: string;
-  }
-> = {
+const THEME_COLORS: Record<Theme, ThemeColors> = {
   dark: {
     bg: "#000",
     card: "#0d0d0d",
@@ -151,6 +149,195 @@ function Toggle({
     </button>
   );
 }
+
+function Divider({ c }: { c: ThemeColors }) {
+  return <div style={{ background: c.border, height: 1, margin: "0 16px" }} />;
+}
+
+function Row({
+  c,
+  label,
+  sub,
+  right,
+}: {
+  c: ThemeColors;
+  label: string;
+  sub?: string;
+  right: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center justify-between px-4 py-4">
+      <div className="flex-1 pr-4">
+        <p style={{ color: c.text }} className="text-[15px]">
+          {label}
+        </p>
+        {sub && (
+          <p style={{ color: c.sub }} className="text-[12px] mt-0.5">
+            {sub}
+          </p>
+        )}
+      </div>
+      {right}
+    </div>
+  );
+}
+
+function Field({
+  c,
+  label,
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+  maxLength,
+  multiline,
+}: {
+  c: ThemeColors;
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  type?: string;
+  maxLength?: number;
+  multiline?: boolean;
+}) {
+  return (
+    <div className="px-4 py-3">
+      <label
+        style={{ color: c.sub }}
+        className="block text-[11px] uppercase tracking-widest mb-1.5"
+      >
+        {label}
+      </label>
+      {multiline ? (
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          rows={3}
+          maxLength={maxLength}
+          style={{ color: c.text, background: "transparent" }}
+          className="w-full text-[15px] outline-none resize-none placeholder:opacity-30"
+        />
+      ) : (
+        <input
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          maxLength={maxLength}
+          style={{ color: c.text, background: "transparent" }}
+          className="w-full text-[15px] outline-none placeholder:opacity-30"
+        />
+      )}
+      {maxLength && (
+        <p
+          style={{ color: c.sub }}
+          className="text-[11px] text-right mt-1 opacity-50"
+        >
+          {value.length}/{maxLength}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function Card({ c, children }: { c: ThemeColors; children: React.ReactNode }) {
+  return (
+    <div
+      style={{ background: c.card, border: `1px solid ${c.border}` }}
+      className="mx-4 rounded-2xl overflow-hidden"
+    >
+      {children}
+    </div>
+  );
+}
+
+function SectionLabel({ c, text }: { c: ThemeColors; text: string }) {
+  return (
+    <p
+      style={{ color: c.sub }}
+      className="px-4 pt-5 pb-2 text-[11px] font-semibold uppercase tracking-widest"
+    >
+      {text}
+    </p>
+  );
+}
+
+function SaveButton({
+  saving,
+  saveMsg,
+  onPress,
+}: {
+  c: ThemeColors;
+  saving: boolean;
+  saveMsg: "idle" | "success" | "error";
+  onPress: () => void;
+}) {
+  return (
+    <div className="px-4 mt-6 pb-2">
+      <button
+        onClick={onPress}
+        disabled={saving}
+        className="w-full bg-[#0095f6] text-white text-[15px] font-semibold py-3.5 rounded-2xl disabled:opacity-50 flex items-center justify-center gap-2"
+      >
+        {saving ? (
+          <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+        ) : saveMsg === "success" ? (
+          <>
+            <Check size={18} /> Saved
+          </>
+        ) : saveMsg === "error" ? (
+          "Try again"
+        ) : (
+          "Save changes"
+        )}
+      </button>
+    </div>
+  );
+}
+
+function SectionTopBar({
+  c,
+  title,
+  saving,
+  saveMsg,
+  onBack,
+  onSave,
+}: {
+  c: ThemeColors;
+  title: string;
+  saving: boolean;
+  saveMsg: "idle" | "success" | "error";
+  onBack: () => void;
+  onSave?: () => void;
+}) {
+  return (
+    <div
+      style={{ background: c.bg, borderBottom: `1px solid ${c.border}` }}
+      className="sticky top-0 z-40 flex items-center justify-between px-4 py-3"
+    >
+      <button onClick={onBack} className="p-1">
+        <ChevronLeft size={24} style={{ color: c.text }} />
+      </button>
+      <h1 style={{ color: c.text }} className="text-[17px] font-semibold">
+        {title}
+      </h1>
+      {onSave ? (
+        <button
+          onClick={onSave}
+          disabled={saving}
+          className="text-[#0095f6] text-[15px] font-semibold disabled:opacity-40"
+        >
+          {saving ? "…" : saveMsg === "success" ? "✓" : "Save"}
+        </button>
+      ) : (
+        <div className="w-10" />
+      )}
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const { data: session, update, status } = useSession();
   const router = useRouter();
@@ -270,9 +457,7 @@ export default function SettingsPage() {
       if (avatarFile) fd.append("avatar", avatarFile);
       const res = await fetch(`/api/users/${session?.user?.username}`, {
         method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${session?.user?.token}`,
-        },
+        headers: { Authorization: `Bearer ${session?.user?.token}` },
         body: fd,
       });
       if (!res.ok) throw new Error();
@@ -296,9 +481,7 @@ export default function SettingsPage() {
       fd.append("allowDMs", privacy.allowDMs);
       const res = await fetch(`/api/users/${session?.user?.username}`, {
         method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${session?.user?.token}`,
-        },
+        headers: { Authorization: `Bearer ${session?.user?.token}` },
         body: fd,
       });
       if (!res.ok) throw new Error();
@@ -340,162 +523,6 @@ export default function SettingsPage() {
     setAvatarFile(file);
     setAvatarPreview(URL.createObjectURL(file));
   };
-  
-
-  const Divider = () => (
-    <div style={{ background: c.border, height: 1, margin: "0 16px" }} />
-  );
-
-  const Row = ({
-    label,
-    sub,
-    right,
-  }: {
-    label: string;
-    sub?: string;
-    right: React.ReactNode;
-  }) => (
-    <div className="flex items-center justify-between px-4 py-4">
-      <div className="flex-1 pr-4">
-        <p style={{ color: c.text }} className="text-[15px]">
-          {label}
-        </p>
-        {sub && (
-          <p style={{ color: c.sub }} className="text-[12px] mt-0.5">
-            {sub}
-          </p>
-        )}
-      </div>
-      {right}
-    </div>
-  );
-
-  const Field = ({
-    label,
-    value,
-    onChange,
-    placeholder,
-    type = "text",
-    maxLength,
-    multiline,
-  }: {
-    label: string;
-    value: string;
-    onChange: (v: string) => void;
-    placeholder?: string;
-    type?: string;
-    maxLength?: number;
-    multiline?: boolean;
-  }) => (
-    <div className="px-4 py-3">
-      <label
-        style={{ color: c.sub }}
-        className="block text-[11px] uppercase tracking-widest mb-1.5"
-      >
-        {label}
-      </label>
-      {multiline ? (
-        <textarea
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          rows={3}
-          maxLength={maxLength}
-          style={{ color: c.text, background: "transparent" }}
-          className="w-full text-[15px] outline-none resize-none placeholder:opacity-30"
-        />
-      ) : (
-        <input
-          type={type}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          maxLength={maxLength}
-          style={{ color: c.text, background: "transparent" }}
-          className="w-full text-[15px] outline-none placeholder:opacity-30"
-        />
-      )}
-      {maxLength && (
-        <p
-          style={{ color: c.sub }}
-          className="text-[11px] text-right mt-1 opacity-50"
-        >
-          {value.length}/{maxLength}
-        </p>
-      )}
-    </div>
-  );
-
-  const Card = ({ children }: { children: React.ReactNode }) => (
-    <div
-      style={{ background: c.card, border: `1px solid ${c.border}` }}
-      className="mx-4 rounded-2xl overflow-hidden"
-    >
-      {children}
-    </div>
-  );
-
-  const SectionLabel = ({ text }: { text: string }) => (
-    <p
-      style={{ color: c.sub }}
-      className="px-4 pt-5 pb-2 text-[11px] font-semibold uppercase tracking-widest"
-    >
-      {text}
-    </p>
-  );
-
-  const SaveButton = ({ onPress }: { onPress: () => void }) => (
-    <div className="px-4 mt-6 pb-2">
-      <button
-        onClick={onPress}
-        disabled={saving}
-        className="w-full bg-[#0095f6] text-white text-[15px] font-semibold py-3.5 rounded-2xl disabled:opacity-50 flex items-center justify-center gap-2"
-      >
-        {saving ? (
-          <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-        ) : saveMsg === "success" ? (
-          <>
-            <Check size={18} /> Saved
-          </>
-        ) : saveMsg === "error" ? (
-          "Try again"
-        ) : (
-          "Save changes"
-        )}
-      </button>
-    </div>
-  );
-
-  const TopBar = ({
-    title,
-    onSave,
-  }: {
-    title: string;
-    onSave?: () => void;
-  }) => (
-    <div
-      style={{ background: c.bg, borderBottom: `1px solid ${c.border}` }}
-      className="sticky top-0 z-40 flex items-center justify-between px-4 py-3"
-    >
-      <button onClick={() => setSection("home")} className="p-1">
-        <ChevronLeft size={24} style={{ color: c.text }} />
-      </button>
-      <h1 style={{ color: c.text }} className="text-[17px] font-semibold">
-        {title}
-      </h1>
-      {onSave ? (
-        <button
-          onClick={onSave}
-          disabled={saving}
-          className="text-[#0095f6] text-[15px] font-semibold disabled:opacity-40"
-        >
-          {saving ? "…" : saveMsg === "success" ? "✓" : "Save"}
-        </button>
-      ) : (
-        <div className="w-10" />
-      )}
-    </div>
-  );
 
   if (status === "loading")
     return (
@@ -549,7 +576,6 @@ export default function SettingsPage() {
         style={{ background: c.bg }}
         className="max-w-md mx-auto min-h-screen pb-24"
       >
-        {/* Top bar */}
         <div
           style={{ background: c.bg, borderBottom: `1px solid ${c.border}` }}
           className="sticky top-0 z-40 flex items-center justify-between px-4 py-3"
@@ -563,7 +589,6 @@ export default function SettingsPage() {
           <div className="w-8" />
         </div>
 
-        {/* Avatar preview */}
         <div className="flex flex-col items-center pt-8 pb-6">
           <div
             style={{ border: `2px solid ${c.border}` }}
@@ -594,9 +619,8 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        {/* Menu */}
-        <SectionLabel text="Manage" />
-        <Card>
+        <SectionLabel c={c} text="Manage" />
+        <Card c={c}>
           {items.map((item, i) => (
             <div key={item.id}>
               <button
@@ -622,14 +646,13 @@ export default function SettingsPage() {
                 </div>
                 <ChevronRight size={16} style={{ color: c.border }} />
               </button>
-              {i < items.length - 1 && <Divider />}
+              {i < items.length - 1 && <Divider c={c} />}
             </div>
           ))}
         </Card>
 
-        {/* account actions */}
-        <SectionLabel text="Account" />
-        <Card>
+        <SectionLabel c={c} text="Account" />
+        <Card c={c}>
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
             className="w-full flex items-center gap-4 px-4 py-4 active:opacity-60 transition-opacity"
@@ -644,7 +667,7 @@ export default function SettingsPage() {
               Log out
             </p>
           </button>
-          <Divider />
+          <Divider c={c} />
           <button className="w-full flex items-center gap-4 px-4 py-4 active:opacity-60 transition-opacity">
             <div
               style={{ background: c.input }}
@@ -667,7 +690,14 @@ export default function SettingsPage() {
         style={{ background: c.bg }}
         className="max-w-md mx-auto min-h-screen pb-24"
       >
-        <TopBar title="Account" onSave={saveProfile} />
+        <SectionTopBar
+          c={c}
+          title="Account"
+          saving={saving}
+          saveMsg={saveMsg}
+          onBack={() => setSection("home")}
+          onSave={saveProfile}
+        />
 
         {/* Avatar */}
         <div
@@ -720,23 +750,26 @@ export default function SettingsPage() {
           />
         </div>
 
-        <SectionLabel text="Personal info" />
-        <Card>
+        <SectionLabel c={c} text="Personal info" />
+        <Card c={c}>
           <Field
+            c={c}
             label="Full name"
             value={profile.fullName}
             onChange={(v) => setProfile((p) => ({ ...p, fullName: v }))}
             placeholder="Your name"
           />
-          <Divider />
+          <Divider c={c} />
           <Field
+            c={c}
             label="Username"
             value={profile.username}
             onChange={(v) => setProfile((p) => ({ ...p, username: v }))}
             placeholder="username"
           />
-          <Divider />
+          <Divider c={c} />
           <Field
+            c={c}
             label="Bio"
             value={profile.bio}
             onChange={(v) => setProfile((p) => ({ ...p, bio: v }))}
@@ -744,7 +777,7 @@ export default function SettingsPage() {
             maxLength={150}
             multiline
           />
-          <Divider />
+          <Divider c={c} />
           <div className="px-4 py-3">
             <label
               style={{ color: c.sub }}
@@ -767,7 +800,7 @@ export default function SettingsPage() {
               ))}
             </select>
           </div>
-          <Divider />
+          <Divider c={c} />
           <div className="px-4 py-3">
             <label
               style={{ color: c.sub }}
@@ -792,8 +825,9 @@ export default function SettingsPage() {
           </div>
           {profile.gender === "Custom" && (
             <>
-              <Divider />
+              <Divider c={c} />
               <Field
+                c={c}
                 label="Custom gender"
                 value={profile.customGender}
                 onChange={(v) => setProfile((p) => ({ ...p, customGender: v }))}
@@ -803,16 +837,17 @@ export default function SettingsPage() {
           )}
         </Card>
 
-        <SectionLabel text="Website & links" />
-        <Card>
+        <SectionLabel c={c} text="Website & links" />
+        <Card c={c}>
           <Field
+            c={c}
             label="Website"
             value={profile.website}
             onChange={(v) => setProfile((p) => ({ ...p, website: v }))}
             placeholder="https://"
             type="url"
           />
-          {profile.links.length > 0 && <Divider />}
+          {profile.links.length > 0 && <Divider c={c} />}
           {profile.links.map((link, i) => (
             <div key={i}>
               <div className="flex items-center gap-3 px-4 py-3">
@@ -830,7 +865,9 @@ export default function SettingsPage() {
                       {link.title}
                     </p>
                   )}
-                  <p className="text-[13px] text-[#0095f6] truncate">{link.url}</p>
+                  <p className="text-[13px] text-[#0095f6] truncate">
+                    {link.url}
+                  </p>
                 </div>
                 <button
                   onClick={() =>
@@ -844,10 +881,9 @@ export default function SettingsPage() {
                   <X size={15} className="text-[#ed4956]" />
                 </button>
               </div>
-              <Divider />
+              <Divider c={c} />
             </div>
           ))}
-
           {showAddLink ? (
             <div className="px-4 py-3 flex flex-col gap-3">
               <input
@@ -916,7 +952,12 @@ export default function SettingsPage() {
             </button>
           )}
         </Card>
-        <SaveButton onPress={saveProfile} />
+        <SaveButton
+          c={c}
+          saving={saving}
+          saveMsg={saveMsg}
+          onPress={saveProfile}
+        />
       </main>
     );
 
@@ -926,11 +967,19 @@ export default function SettingsPage() {
         style={{ background: c.bg }}
         className="max-w-md mx-auto min-h-screen pb-24"
       >
-        <TopBar title="Privacy" onSave={savePrivacy} />
+        <SectionTopBar
+          c={c}
+          title="Privacy"
+          saving={saving}
+          saveMsg={saveMsg}
+          onBack={() => setSection("home")}
+          onSave={savePrivacy}
+        />
 
-        <SectionLabel text="Account" />
-        <Card>
+        <SectionLabel c={c} text="Account" />
+        <Card c={c}>
           <Row
+            c={c}
             label="Private account"
             sub="Only followers see your posts"
             right={
@@ -940,8 +989,9 @@ export default function SettingsPage() {
               />
             }
           />
-          <Divider />
+          <Divider c={c} />
           <Row
+            c={c}
             label="Activity status"
             sub="Show when you were last active"
             right={
@@ -953,8 +1003,9 @@ export default function SettingsPage() {
               />
             }
           />
-          <Divider />
+          <Divider c={c} />
           <Row
+            c={c}
             label="Story resharing"
             sub="Let others share your stories"
             right={
@@ -966,8 +1017,9 @@ export default function SettingsPage() {
               />
             }
           />
-          <Divider />
+          <Divider c={c} />
           <Row
+            c={c}
             label="Allow tagging"
             sub="Let others tag you in posts"
             right={
@@ -979,8 +1031,8 @@ export default function SettingsPage() {
           />
         </Card>
 
-        <SectionLabel text="Messages" />
-        <Card>
+        <SectionLabel c={c} text="Messages" />
+        <Card c={c}>
           <div className="px-4 py-3">
             <p
               style={{ color: c.sub }}
@@ -1001,12 +1053,17 @@ export default function SettingsPage() {
                     <Check size={16} className="text-[#0095f6]" />
                   )}
                 </button>
-                {i < arr.length - 1 && <Divider />}
+                {i < arr.length - 1 && <Divider c={c} />}
               </div>
             ))}
           </div>
         </Card>
-        <SaveButton onPress={savePrivacy} />
+        <SaveButton
+          c={c}
+          saving={saving}
+          saveMsg={saveMsg}
+          onPress={savePrivacy}
+        />
       </main>
     );
 
@@ -1041,10 +1098,17 @@ export default function SettingsPage() {
         style={{ background: c.bg }}
         className="max-w-md mx-auto min-h-screen pb-24"
       >
-        <TopBar title="Notifications" />
-        <SectionLabel text="Push" />
-        <Card>
+        <SectionTopBar
+          c={c}
+          title="Notifications"
+          saving={saving}
+          saveMsg={saveMsg}
+          onBack={() => setSection("home")}
+        />
+        <SectionLabel c={c} text="Push" />
+        <Card c={c}>
           <Row
+            c={c}
             label="Enable push notifications"
             sub="Master toggle for all alerts"
             right={
@@ -1055,11 +1119,12 @@ export default function SettingsPage() {
             }
           />
         </Card>
-        <SectionLabel text="Activity" />
-        <Card>
+        <SectionLabel c={c} text="Activity" />
+        <Card c={c}>
           {rows.map((r, i) => (
             <div key={r.field}>
               <Row
+                c={c}
                 label={r.label}
                 sub={r.sub}
                 right={
@@ -1069,11 +1134,16 @@ export default function SettingsPage() {
                   />
                 }
               />
-              {i < rows.length - 1 && <Divider />}
+              {i < rows.length - 1 && <Divider c={c} />}
             </div>
           ))}
         </Card>
-        <SaveButton onPress={() => flash("success")} />
+        <SaveButton
+          c={c}
+          saving={saving}
+          saveMsg={saveMsg}
+          onPress={() => flash("success")}
+        />
       </main>
     );
   }
@@ -1094,10 +1164,15 @@ export default function SettingsPage() {
         style={{ background: c.bg }}
         className="max-w-md mx-auto min-h-screen pb-24"
       >
-        <TopBar title="Appearance" />
-
-        <SectionLabel text="Theme" />
-        <Card>
+        <SectionTopBar
+          c={c}
+          title="Appearance"
+          saving={saving}
+          saveMsg={saveMsg}
+          onBack={() => setSection("home")}
+        />
+        <SectionLabel c={c} text="Theme" />
+        <Card c={c}>
           <div className="p-4 flex gap-3">
             {themes.map((t) => (
               <button
@@ -1130,8 +1205,8 @@ export default function SettingsPage() {
           </div>
         </Card>
 
-        <SectionLabel text="Font size" />
-        <Card>
+        <SectionLabel c={c} text="Font size" />
+        <Card c={c}>
           <div className="p-4 flex gap-3">
             {fontSizes.map((f) => (
               <button
@@ -1153,8 +1228,8 @@ export default function SettingsPage() {
           </div>
         </Card>
 
-        <SectionLabel text="Language" />
-        <Card>
+        <SectionLabel c={c} text="Language" />
+        <Card c={c}>
           <div className="px-4 py-3">
             <select
               value={appearance.language}
@@ -1172,7 +1247,12 @@ export default function SettingsPage() {
             </select>
           </div>
         </Card>
-        <SaveButton onPress={() => flash("success")} />
+        <SaveButton
+          c={c}
+          saving={saving}
+          saveMsg={saveMsg}
+          onPress={() => flash("success")}
+        />
       </main>
     );
   }
@@ -1183,10 +1263,17 @@ export default function SettingsPage() {
         style={{ background: c.bg }}
         className="max-w-md mx-auto min-h-screen pb-24"
       >
-        <TopBar title="Security" onSave={savePassword} />
+        <SectionTopBar
+          c={c}
+          title="Security"
+          saving={saving}
+          saveMsg={saveMsg}
+          onBack={() => setSection("home")}
+          onSave={savePassword}
+        />
 
-        <SectionLabel text="Change password" />
-        <Card>
+        <SectionLabel c={c} text="Change password" />
+        <Card c={c}>
           {[
             { key: "current" as const, label: "Current password" },
             { key: "next" as const, label: "New password" },
@@ -1221,7 +1308,7 @@ export default function SettingsPage() {
                   )}
                 </div>
               </div>
-              {i < arr.length - 1 && <Divider />}
+              {i < arr.length - 1 && <Divider c={c} />}
             </div>
           ))}
           {passwords.next &&
@@ -1233,21 +1320,27 @@ export default function SettingsPage() {
             )}
         </Card>
 
-        <SectionLabel text="Sessions" />
-        <Card>
+        <SectionLabel c={c} text="Sessions" />
+        <Card c={c}>
           <Row
+            c={c}
             label="Active sessions"
             sub="This device · Last active now"
             right={<Globe size={16} style={{ color: c.sub }} />}
           />
-          <Divider />
+          <Divider c={c} />
           <button className="w-full px-4 py-4 text-left active:opacity-60 transition-opacity">
             <p className="text-[15px] text-[#ed4956]">
               Log out all other devices
             </p>
           </button>
         </Card>
-        <SaveButton onPress={savePassword} />
+        <SaveButton
+          c={c}
+          saving={saving}
+          saveMsg={saveMsg}
+          onPress={savePassword}
+        />
       </main>
     );
 

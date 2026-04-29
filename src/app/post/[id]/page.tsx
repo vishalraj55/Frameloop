@@ -1,7 +1,7 @@
 "use client";
 
-import { use, useEffect, useRef, useState } from "react";
-import { notFound, useRouter } from "next/navigation";
+import { Suspense, use, useEffect, useRef, useState } from "react";
+import { notFound, useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Post from "@/components/Post";
 
@@ -19,10 +19,12 @@ interface PostData {
   createdAt?: string;
 }
 
-export default function PostPage({ params }: { params: Promise<{ id: string }> }) {
+function PostPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
   const { data: session } = useSession();
+  const searchParams = useSearchParams();
+  const isExplore = searchParams.get("source") === "explore";
 
   const [allPosts, setAllPosts] = useState<PostData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,27 +36,36 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/posts/${id}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/posts/${id}`, { 
           cache: "no-store",
         });
         if (!res.ok) return setNotFoundState(true);
         const post: PostData = await res.json();
 
-        const allRes = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/posts/user/${post.author.id}`,
-          { cache: "no-store" }
-        );
-        const all: PostData[] = allRes.ok ? await allRes.json() : [post];
-
-        const others = all.filter((p) => p.id !== post.id);
-        setAllPosts([post, ...others]);
+        if (isExplore) {
+          const allRes = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/posts?limit=30&userId=${session?.user?.id ?? ""}`,
+            { cache: "no-store" },
+          );
+          const all: PostData[] = allRes.ok ? await allRes.json() : [post];
+          const others = all.filter((p) => p.id !== post.id);
+          setAllPosts([post, ...others]);
+        } else {
+          const allRes = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/posts/user/${post.author.id}`,
+            { cache: "no-store" },
+          );
+          const all: PostData[] = allRes.ok ? await allRes.json() : [post];
+          const others = all.filter((p) => p.id !== post.id);
+          setAllPosts([post, ...others]);
+        }
       } catch {
         setNotFoundState(true);
       } finally {
         setLoading(false);
       }
     })();
-  }, [id]);
+  }, [id, session, isExplore]);
 
   useEffect(() => {
     if (!didScroll.current && focusedRef.current && allPosts.length > 0) {
@@ -115,5 +126,13 @@ export default function PostPage({ params }: { params: Promise<{ id: string }> }
         ))}
       </div>
     </main>
+  );
+}
+
+export default function Page({ params }: { params: Promise<{ id: string }> }) {
+  return (
+    <Suspense>
+      <PostPage params={params} />
+    </Suspense>
   );
 }
