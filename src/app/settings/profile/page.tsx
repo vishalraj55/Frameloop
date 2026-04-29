@@ -352,6 +352,7 @@ export default function EditProfilePage() {
         </div>
         <Divider />
         {/* Pronouns */}
+        <div className="px-4 py-3">
         <button
           onClick={() => setActiveSheet("pronouns")}
           className="w-full px-4 py-3 text-left active:bg-[#1e1e1e]"
@@ -370,6 +371,7 @@ export default function EditProfilePage() {
             <ChevronRight size={16} className="text-[#4e4e4e]" />
           </div>
         </button>
+        </div>
       </div>
 
       {/* ── Website & links ── */}
@@ -387,12 +389,12 @@ export default function EditProfilePage() {
             placeholder="Website"
             className="w-full bg-transparent text-white text-[15px] outline-none placeholder:text-[#4e4e4e]"
           />
-        </div>
-        <Divider />
-        <button
+        
+          <Divider />
+         <button
           onClick={() => setActiveSheet("links")}
           className="w-full px-4 py-3 flex items-center justify-between active:bg-[#1e1e1e]"
-        >
+         >
           <div className="flex items-center gap-3">
             <LinkIcon size={18} className="text-[#8e8e8e]" />
             <div className="text-left">
@@ -403,9 +405,10 @@ export default function EditProfilePage() {
                   : `${form.links.length} link${form.links.length !== 1 ? "s" : ""}`}
               </p>
             </div>
-          </div>
-          <ChevronRight size={16} className="text-[#4e4e4e]" />
-        </button>
+           </div>
+           <ChevronRight size={16} className="text-[#4e4e4e]" />
+         </button>
+        </div>
       </div>
       {/* ── Privacy ── */}
       <SectionHeader title="Privacy" />
