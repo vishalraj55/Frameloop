@@ -66,6 +66,13 @@ export class PostsService {
     return this.prisma.post.create({ data });
   }
 
+  async updateCaption(id: string, caption: string) {
+    return this.prisma.post.update({
+      where: { id },
+      data: { caption },
+    });
+  }
+
   async likePost(postId: string, userId: string) {
     const existing = await this.prisma.like.findFirst({
       where: { postId, userId },

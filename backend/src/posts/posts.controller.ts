@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
   Delete,
   Body,
   Param,
@@ -70,6 +71,11 @@ export class PostsController {
       caption: body.caption,
       authorId: body.authorId,
     });
+  }
+
+  @Patch(':id')
+  updateCaption(@Param('id') id: string, @Body() body: { caption: string }) {
+    return this.postsService.updateCaption(id, body.caption);
   }
 
   @Post(':id/like')
