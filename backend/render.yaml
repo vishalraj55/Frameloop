@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: new-project-backend
+    env: node
+    rootDir: backend
+    buildCommand: pnpm install && pnpm build
+    startCommand: node dist/src/main
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
