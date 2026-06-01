@@ -6,7 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "cross-env NODE_OPTIONS=--max-old-space-size=512 nest build",
+    "build": "cross-env NODE_OPTIONS=--max-old-space-size=512 node_modules/.bin/nest build",
     "start": "cross-env NODE_OPTIONS=--max-old-space-size=512 nest start",
     "start:dev": "cross-env NODE_OPTIONS=--max-old-space-size=512 nest start --watch",
     "start:debug": "cross-env NODE_OPTIONS=--max-old-space-size=512 nest start --debug --watch",
