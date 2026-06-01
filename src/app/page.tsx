@@ -1,5 +1,7 @@
-import { redirect } from "next/navigation";
-
 export default function HomePage() {
-  redirect("/feed");
+  return (
+    <div>
+      <h1>Hello World</h1>
+    </div>
+  );
 }
