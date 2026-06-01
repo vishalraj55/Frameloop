@@ -6,9 +6,10 @@
     "schema": "backend/prisma/schema.prisma"
   },
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "postinstall": "prisma generate",
+    "dev": "cross-env NODE_OPTIONS=--max-old-space-size=1024 next dev",
+    "build": "cross-env NODE_OPTIONS=--max-old-space-size=1024 next build",
+    "start": "cross-env NODE_OPTIONS=--max-old-space-size=1024 next start",
     "lint": "eslint"
   },
   "dependencies": {
