@@ -67,10 +67,14 @@ export default function UploadPage() {
         ctx.filter = filters[selectedFilter];
         ctx.drawImage(img, 0, 0);
 
-        canvas.toBlob((blob) => {
-          if (!blob) return reject();
-          resolve(blob);
-        }, "image/jpeg", 0.9);
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) return reject();
+            resolve(blob);
+          },
+          "image/jpeg",
+          0.9,
+        );
       };
 
       img.onerror = reject;
@@ -93,8 +97,13 @@ export default function UploadPage() {
       formData.append("caption", caption);
       formData.append("authorId", user.uid);
 
-      const res = await fetch("http://localhost:3000/posts", {
+      const token = await user.getIdToken();
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/posts`, {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
         body: formData,
       });
 
@@ -111,7 +120,6 @@ export default function UploadPage() {
   return (
     <main className="bg-black min-h-screen text-white">
       <div className="mx-auto max-w-md md:max-w-lg lg:max-w-xl px-4 py-6">
-
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-lg font-semibold">Create Post</h1>
           {preview && (
@@ -138,9 +146,7 @@ export default function UploadPage() {
               <div className="w-12 h-12 rounded-full bg-neutral-800 flex items-center justify-center">
                 <ImagePlus size={22} />
               </div>
-              <span className="text-sm text-neutral-400">
-                Select a photo
-              </span>
+              <span className="text-sm text-neutral-400">Select a photo</span>
             </div>
           </label>
         )}
@@ -176,9 +182,7 @@ export default function UploadPage() {
               >
                 <div
                   className={`relative w-14 h-14 rounded-lg overflow-hidden border ${
-                    selectedFilter === f
-                      ? "border-white"
-                      : "border-neutral-700"
+                    selectedFilter === f ? "border-white" : "border-neutral-700"
                   }`}
                 >
                   <Image

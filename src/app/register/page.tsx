@@ -27,7 +27,7 @@ export default function RegisterPage() {
 
       const token = await user.getIdToken();
 
-      const res = await fetch("http://localhost:3000/auth/create-profile", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/create-profile`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
