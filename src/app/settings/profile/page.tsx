@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
@@ -54,7 +54,7 @@ const GENDER_OPTIONS = [
 type SheetType = null | "pronouns" | "gender" | "links" | "addLink" | "privacy";
 
 export default function EditProfilePage() {
-  const { data: session, update, status } = useSession();
+  const { username, user, loading: authLoading } = useAuth();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -82,14 +82,14 @@ export default function EditProfilePage() {
   const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
-    if (status === "loading") return;
-    if (!session?.user?.username) {
+    if (authLoading) return;
+    if (!username) {
       router.push("/login");
       return;
     }
     const fetchProfile = async () => {
       try {
-        const res = await fetch(`/api/users/${session.user.username}`);
+        const res = await fetch(`/api/users/${username}`);
         if (!res.ok) return;
         const data = await res.json();
         setForm((p) => ({
@@ -114,7 +114,7 @@ export default function EditProfilePage() {
       }
     };
     void fetchProfile();
-  }, [session?.user?.username, status, router]);
+  }, [username, authLoading, router]);
 
   function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -158,12 +158,12 @@ export default function EditProfilePage() {
       formData.append("allowStoryResharing", String(form.allowStoryResharing));
       formData.append("links", JSON.stringify(form.links));
       if (avatarFile) formData.append("avatar", avatarFile);
-      formData.append("token", session?.user?.token ?? "");
+      const token = await user!.getIdToken();
 
-      const res = await fetch(`/api/users/${session?.user?.username}`, {
+      const res = await fetch(`/api/users/${username}`, {
         method: "PATCH",
         headers: {
-          Authorization: `Bearer ${session?.user?.token ?? ""}`,
+          Authorization: `Bearer ${token}`,
         },
         body: formData,
       });
@@ -174,7 +174,6 @@ export default function EditProfilePage() {
         return;
       }
 
-      await update({ username: form.username });
       setShowSuccess(true);
       setTimeout(() => router.push(`/profile/${form.username}`), 1200);
     } catch (err) {
@@ -185,7 +184,7 @@ export default function EditProfilePage() {
     }
   }
 
-  if (status === "loading" || loading) {
+  if (authLoading || loading) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-black">
         <div className="w-8 h-8 border-2 border-neutral-700 border-t-white rounded-full animate-spin" />

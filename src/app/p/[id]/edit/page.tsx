@@ -2,7 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import { notFound, useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/context/AuthContext";
 import Image from "next/image";
 
 interface PostData {
@@ -19,20 +19,20 @@ export default function EditPostPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { user, loading } = useAuth();
 
   const [post, setPost] = useState<PostData | null>(null);
   const [caption, setCaption] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [pageLoading, setPageLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    if (!user) {
+      if (loading) return;
       router.replace("/login");
       return;
     }
-    if (status !== "authenticated") return;
 
     (async () => {
       try {
@@ -44,7 +44,7 @@ export default function EditPostPage({
         const data: PostData = await res.json();
 
         // Only the post author can edit
-        if (data.author.id !== session.user?.id) {
+        if (data.author.id !== user?.uid) {
           router.replace(`/p/${id}`);
           return;
         }
@@ -54,10 +54,10 @@ export default function EditPostPage({
       } catch {
         setError("Failed to load post.");
       } finally {
-        setLoading(false);
+        setPageLoading(false)
       }
     })();
-  }, [id, session, status, router]);
+  }, [id, user, loading, router]);
 
   const handleSave = async () => {
     if (!post) return;
@@ -80,7 +80,7 @@ export default function EditPostPage({
     }
   };
 
-  if (loading || status === "loading") {
+  if (pageLoading || loading) {
     return (
       <main className="min-h-screen bg-black flex items-center justify-center">
         <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />

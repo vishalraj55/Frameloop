@@ -18,6 +18,12 @@ export class UsersService {
       },
     });
   }
+  async findById(id: string) {
+    return this.prisma.user.findUnique({
+      where: { id },
+      select: { id: true, username: true },
+    });
+  }
 
   async getProfile(username: string, currentUserId?: string) {
     const user = await this.prisma.user.findUnique({
@@ -114,9 +120,7 @@ export class UsersService {
         ...(data.allowStoryResharing !== undefined && {
           allowStoryResharing: data.allowStoryResharing,
         }),
-        ...(data.links !== undefined && {
-          links: { deleteMany: {}, create: data.links },
-        }),
+        ...(data.links !== undefined && { links: data.links }),
       },
       select: {
         id: true,

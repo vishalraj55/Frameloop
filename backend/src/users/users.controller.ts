@@ -16,9 +16,9 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { Readable } from 'stream';
 import { v2 as cloudinary } from 'cloudinary';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
-import type { AuthRequest } from '../auth/jwt-auth.guard';
+import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
+import { OptionalFirebaseAuthGuard } from '../auth/optional-firebase-auth.guard';
+import type { AuthRequest } from '../firebase/firebase-auth.types.ts';
 import { UsersService } from './users.service';
 
 @Controller('users')
@@ -31,7 +31,7 @@ export class UsersController {
   }
 
   @Get(':username')
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(OptionalFirebaseAuthGuard)
   getProfile(@Param('username') username: string, @Req() req: AuthRequest) {
     return this.usersService.getProfile(username, req.user?.id);
   }
@@ -47,7 +47,7 @@ export class UsersController {
   }
 
   @Patch(':username')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(FirebaseAuthGuard)
   @UseInterceptors(FileInterceptor('avatar', { storage: memoryStorage() }))
   async updateProfile(
     @Param('username') username: string,
@@ -67,7 +67,11 @@ export class UsersController {
       links?: string;
     },
   ) {
-    if (!req.user || req.user.username !== username) {
+    if (!req.user) {
+      throw new ForbiddenException();
+    }
+    const dbUser = await this.usersService.findById(req.user.id);
+    if (!dbUser || dbUser.username !== username) {
       throw new ForbiddenException("Cannot edit another user's profile");
     }
 
@@ -113,7 +117,7 @@ export class UsersController {
   }
 
   @Post(':username/follow')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(FirebaseAuthGuard)
   follow(@Param('username') username: string, @Req() req: AuthRequest) {
     if (!req.user) {
       throw new ForbiddenException();
@@ -122,7 +126,7 @@ export class UsersController {
   }
 
   @Delete(':username/follow')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(FirebaseAuthGuard)
   unfollow(@Param('username') username: string, @Req() req: AuthRequest) {
     if (!req.user) {
       throw new ForbiddenException();

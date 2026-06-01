@@ -2,7 +2,7 @@
 
 import { Suspense, use, useEffect, useRef, useState } from "react";
 import { notFound, useRouter, useSearchParams } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/context/AuthContext";
 import Post from "@/components/Post";
 
 interface PostData {
@@ -22,7 +22,7 @@ interface PostData {
 function PostPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const { data: session } = useSession();
+  const { user, loading: authLoading } = useAuth();
   const searchParams = useSearchParams();
   const isExplore = searchParams.get("source") === "explore";
 
@@ -34,9 +34,18 @@ function PostPage({ params }: { params: Promise<{ id: string }> }) {
   const didScroll = useRef(false);
 
   useEffect(() => {
+    if (authLoading) return;
+
     (async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/posts/${id}`, { 
+        const headers: HeadersInit = {};
+        if (user) {
+          const token = await user.getIdToken();
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+
+        const res = await fetch(`/api/posts/${id}`, {
+          headers,
           cache: "no-store",
         });
         if (!res.ok) return setNotFoundState(true);
@@ -44,17 +53,17 @@ function PostPage({ params }: { params: Promise<{ id: string }> }) {
 
         if (isExplore) {
           const allRes = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/posts?limit=30&userId=${session?.user?.id ?? ""}`,
-            { cache: "no-store" },
+            `/api/posts?limit=30&userId=${user?.uid ?? ""}`,
+            { headers, cache: "no-store" },
           );
           const all: PostData[] = allRes.ok ? await allRes.json() : [post];
           const others = all.filter((p) => p.id !== post.id);
           setAllPosts([post, ...others]);
         } else {
-          const allRes = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/posts/user/${post.author.id}`,
-            { cache: "no-store" },
-          );
+          const allRes = await fetch(`/api/posts/user/${post.author.id}`, {
+            headers,
+            cache: "no-store",
+          });
           const all: PostData[] = allRes.ok ? await allRes.json() : [post];
           const others = all.filter((p) => p.id !== post.id);
           setAllPosts([post, ...others]);
@@ -65,7 +74,7 @@ function PostPage({ params }: { params: Promise<{ id: string }> }) {
         setLoading(false);
       }
     })();
-  }, [id, session, isExplore]);
+  }, [id, user, isExplore, authLoading]);
 
   useEffect(() => {
     if (!didScroll.current && focusedRef.current && allPosts.length > 0) {
@@ -118,7 +127,7 @@ function PostPage({ params }: { params: Promise<{ id: string }> }) {
               imageUrl={post.imageUrl}
               caption={post.caption ?? ""}
               likes={post.likes.length}
-              isLiked={post.likes.some((l) => l.userId === session?.user?.id)}
+              isLiked={post.likes.some((l) => l.userId === user?.uid)}
               createdAt={post.createdAt ?? ""}
               isFollowing={post.author.isFollowing ?? false}
             />

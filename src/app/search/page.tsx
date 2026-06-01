@@ -7,6 +7,7 @@ import Link from 'next/link';
 interface UserType {
   username: string;
   avatarUrl?: string;
+  fullName: string;
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -136,7 +137,7 @@ export default function SearchPage() {
                     {user.username}
                   </span>
                   <span className="text-neutral-500 text-xs truncate">
-                    {user.username}
+                    {user.fullName || 'No name provided'}
                   </span>
                 </div>
               </Link>

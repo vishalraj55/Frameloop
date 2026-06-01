@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/context/AuthContext";
 import { ArrowLeft, Search } from "lucide-react";
 
 interface FollowUser {
@@ -18,17 +18,18 @@ export default function FollowersPage() {
   const params = useParams();
   const router = useRouter();
   const username = params?.username as string;
-  const { data: session } = useSession();
+  const { user: currentUser, loading: authLoading } = useAuth();
 
   const [users, setUsers] = useState<FollowUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
+    if (authLoading || !currentUser) return;
     const fetch_ = async () => {
       try {
         const res = await fetch(`/api/users/${username}/followers`, {
-          headers: { Authorization: `Bearer ${session?.user?.token}` },
+          headers: { Authorization: `Bearer ${await currentUser!.getIdToken()}` },
         });
         if (res.ok) {
           const data = (await res.json()) as FollowUser[];
@@ -41,16 +42,16 @@ export default function FollowersPage() {
       }
     };
     if (username) void fetch_();
-  }, [username, session]);
+  }, [username, currentUser, authLoading]);
 
   const handleFollow = async (targetUsername: string, isFollowing: boolean) => {
     const res = await fetch(`/api/users/${targetUsername}/follow`, {
       method: isFollowing ? "DELETE" : "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${session?.user?.token}`,
+        Authorization: `Bearer ${await currentUser!.getIdToken()}`,
       },
-      body: JSON.stringify({ followerId: session?.user?.id }),
+      body: JSON.stringify({ followerId: currentUser?.uid }),
     });
     if (res.ok) {
       setUsers((prev) =>
@@ -155,7 +156,7 @@ export default function FollowersPage() {
                   )}
                 </button>
               </div>
-              {session?.user?.username !== user.username && (
+              {currentUser?.uid !== user.id && (
                 <button
                   onClick={() => handleFollow(user.username, user.isFollowing ?? false)}
                   className={`px-4 py-1.5 rounded-lg text-[12px] font-semibold shrink-0 transition-all active:scale-95 ${

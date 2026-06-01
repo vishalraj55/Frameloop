@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/context/AuthContext";
 import { Eye } from "lucide-react";
 
 interface StoryView {
@@ -34,9 +34,8 @@ export default function StoryPage() {
   const router = useRouter();
   const params = useParams();
   const username = params.username as string;
-  const { data: session } = useSession();
-  const token = session?.user?.token ?? null;
-  const currentUserId = session?.user?.id ?? null;
+  const { user } = useAuth();
+  const currentUserId = user?.uid ?? null;
 
   const [stories, setStories] = useState<StoryType[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -58,7 +57,10 @@ export default function StoryPage() {
     const fetchStories = async () => {
       try {
         const headers: HeadersInit = {};
-        if (token) headers["Authorization"] = `Bearer ${token}`;
+        if (user) {
+          const token = await user.getIdToken();
+          headers["Authorization"] = `Bearer ${token}`;
+        }
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/stories/${username}`,
           { headers },
@@ -70,39 +72,44 @@ export default function StoryPage() {
       }
     };
     void fetchStories();
-  }, [username, token]);
+  }, [username, user]);
 
   // Record view when story loads
-  useEffect(() => {
-    const story = stories[currentIndex];
-    if (!story || !token || !loaded) return;
-    if (story.author.id === currentUserId) return;
-    if (viewedIds.current.has(story.id)) return;
+useEffect(() => {
+  const story = stories[currentIndex];
+  if (!story || !user || !loaded) return;
+  if (story.author.id === currentUserId) return;
+  if (viewedIds.current.has(story.id)) return;
 
-    viewedIds.current.add(story.id);
+  viewedIds.current.add(story.id);
 
+  const recordView = async () => {
+    const token = await user.getIdToken();
     void fetch(`${process.env.NEXT_PUBLIC_API_URL}/stories/${story.id}/view`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
     });
-  }, [currentIndex, stories, token, loaded, currentUserId]);
+  };
+  void recordView();
+}, [currentIndex, stories, user, loaded, currentUserId]);
 
-  const fetchViews = useCallback(
-    async (storyId: string) => {
-      if (!token) return;
-      try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/stories/${storyId}/views`,
-          { headers: { Authorization: `Bearer ${token}` } },
-        );
-        const data = (await res.json()) as StoryView[];
-        setViews(data);
-      } catch (err) {
-        console.error("Failed to fetch views:", err);
-      }
-    },
-    [token],
-  );
+const fetchViews = useCallback(
+  async (storyId: string) => {
+    if (!user) return;
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/stories/${storyId}/views`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      const data = (await res.json()) as StoryView[];
+      setViews(data);
+    } catch (err) {
+      console.error("Failed to fetch views:", err);
+    }
+  },
+  [user],
+);
 
   const handleShowViews = () => {
     const story = stories[currentIndex];

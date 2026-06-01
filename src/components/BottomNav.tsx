@@ -2,109 +2,97 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
-import { Home, Search, Compass, User, PlusSquare, Settings, LogOut } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import {
+  Home, Search, Compass, User as UserIcon,
+  PlusSquare, Settings, LogOut,
+} from "lucide-react";
 
 export default function NavBar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { user, username, loading, logout } = useAuth();
 
-  const username = session?.user?.username;
-  const isOwnProfile =
-    !!username && pathname === `/profile/${username}`;
+  const isOwnProfile = !!username && pathname === `/profile/${username}`;
 
   const active = (path: string) =>
     pathname === path ? "text-white" : "text-neutral-400 hover:text-white";
 
-  const handleSignOut = () => signOut({ callbackUrl: "/login" });
+  const handleSignOut = async () => {
+    await logout();
+    router.push("/login");
+  };
 
   return (
     <>
-      {/* ── Mobile bottom nav ── */}
+      {/* Mobile bottom nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 bg-black/95 backdrop-blur-md border-t border-neutral-800 md:hidden">
         <div className="mx-auto max-w-lg h-14 flex items-center justify-around px-6">
           <Link href="/feed" className={active("/feed")}>
             <Home size={24} strokeWidth={1.6} />
           </Link>
-
           <Link href="/search" className={active("/search")}>
             <Search size={24} strokeWidth={1.6} />
           </Link>
-
           <Link href="/upload" className={active("/upload")}>
             <PlusSquare size={24} strokeWidth={1.6} />
           </Link>
-
           <Link href="/explore" className={active("/explore")}>
             <Compass size={24} strokeWidth={1.6} />
           </Link>
-
-          {status === "loading" ? (
+          {loading ? (
             <div className="w-6 h-6" />
           ) : username ? (
             <Link href={`/profile/${username}`} className={active(`/profile/${username}`)}>
-              <User size={24} strokeWidth={1.6} />
+              <UserIcon size={24} strokeWidth={1.6} />
             </Link>
           ) : (
             <Link href="/login" className={active("/login")}>
-              <User size={24} strokeWidth={1.6} />
+              <UserIcon size={24} strokeWidth={1.6} />
             </Link>
           )}
         </div>
       </nav>
 
-      {/* ── Desktop sidebar ── */}
+      {/* Desktop sidebar */}
       <aside className="hidden md:flex fixed top-0 left-0 h-screen z-40 bg-black border-r border-black flex-col py-8">
         <div className="group/sidebar flex flex-col h-full w-20 hover:w-60 transition-[width] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden">
 
-          {/* Logo spacer */}
           <div className="px-6 mb-10" />
 
-          {/* Main nav */}
           <div className="flex flex-col gap-2 px-3">
-
             <NavItem href="/feed" label="Home" active={active("/feed")}>
               <Home size={26} strokeWidth={1.7} />
             </NavItem>
-
             <NavItem href="/search" label="Search" active={active("/search")}>
               <Search size={26} strokeWidth={1.7} />
             </NavItem>
-
             <NavItem href="/explore" label="Explore" active={active("/explore")}>
               <Compass size={26} strokeWidth={1.7} />
             </NavItem>
-
             <NavItem href="/upload" label="Create" active={active("/upload")}>
               <PlusSquare size={26} strokeWidth={1.7} />
             </NavItem>
-
-            {status === "loading" ? (
+            {loading ? (
               <div className="w-6 h-6 ml-3" />
             ) : username ? (
-              <NavItem
-                href={`/profile/${username}`}
-                label="Profile"
-                active={active(`/profile/${username}`)}
-              >
-                <User size={26} strokeWidth={1.7} />
+              <NavItem href={`/profile/${username}`} label="Profile" active={active(`/profile/${username}`)}>
+                <UserIcon size={26} strokeWidth={1.7} />
               </NavItem>
             ) : (
               <NavItem href="/login" label="Login" active={active("/login")}>
-                <User size={26} strokeWidth={1.7} />
+                <UserIcon size={26} strokeWidth={1.7} />
               </NavItem>
             )}
           </div>
 
           <div className="flex-1" />
-          {/* Bottom actions */}
+
           <div className="flex flex-col gap-2 px-3">
             {isOwnProfile && (
               <button
                 onClick={() => router.push("/settings")}
                 className="flex items-center gap-5 px-4 py-3 rounded-xl transition-colors duration-200 text-neutral-400 hover:text-white hover:bg-neutral-900/80 w-full"
-                aria-label="Settings"
               >
                 <div className="min-w-7 flex justify-center">
                   <Settings size={26} strokeWidth={1.7} />
@@ -114,11 +102,10 @@ export default function NavBar() {
                 </span>
               </button>
             )}
-            {session ? (
+            {user ? (
               <button
-                onClick={handleSignOut}
+                onClick={() => void handleSignOut()}
                 className="flex items-center gap-5 px-4 py-3 rounded-xl transition-colors duration-200 text-neutral-400 hover:text-white hover:bg-neutral-900/80 w-full"
-                aria-label="Sign out"
               >
                 <div className="min-w-7 flex justify-center">
                   <LogOut size={26} strokeWidth={1.7} />
@@ -140,10 +127,7 @@ export default function NavBar() {
 }
 
 function NavItem({
-  href,
-  label,
-  active,
-  children,
+  href, label, active, children,
 }: {
   href: string;
   label: string;

@@ -1,16 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { auth } from "@/lib/firebase";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [form, setForm] = useState({
-    username: "",
-    email: "",
-    password: "",
-  });
+  const [form, setForm] = useState({ username: "", email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -19,26 +17,50 @@ export default function RegisterPage() {
     setError("");
 
     try {
-      const res = await fetch("http://localhost:3000/auth/register", {
+      const { user } = await createUserWithEmailAndPassword(
+        auth,
+        form.email,
+        form.password,
+      );
+
+      await updateProfile(user, { displayName: form.username });
+
+      const token = await user.getIdToken();
+
+      const res = await fetch("http://localhost:3000/auth/create-profile", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          id: user.uid,
+          username: form.username,
+          email: form.email,
+        }),
       });
 
-      console.log("Status:", res.status);
-      const data = await res.json();
-      console.log("Response:", data);
-
       if (!res.ok) {
-        setError("Registration failed. Username or email may already exist.");
+        await user.delete();
+        setError("Username may already be taken.");
         setLoading(false);
         return;
       }
 
-      router.push("/login");
+      router.push("/feed");
     } catch (err) {
-      console.error("Error:", err);
-      setError("Something went wrong. Please try again.");
+      if (err instanceof Error && "code" in err) {
+        const code = (err as Error & { code: string }).code;
+        if (code === "auth/email-already-in-use") {
+          setError("Email already in use.");
+        } else if (code === "auth/weak-password") {
+          setError("Password must be at least 6 characters.");
+        } else {
+          setError("Something went wrong. Please try again.");
+        }
+      } else {
+        setError("Something went wrong. Please try again.");
+      }
       setLoading(false);
     }
   }
@@ -49,7 +71,6 @@ export default function RegisterPage() {
         <h1 className="text-white text-center text-3xl font-bold mb-8 tracking-wider">
           Frameloop
         </h1>
-
         <input
           type="text"
           placeholder="Username"
@@ -57,7 +78,6 @@ export default function RegisterPage() {
           onChange={(e) => setForm({ ...form, username: e.target.value })}
           className="w-full bg-gray-900 border border-gray-700 text-white text-sm px-3 py-2 mb-2 outline-none"
         />
-
         <input
           type="email"
           placeholder="Email"
@@ -65,7 +85,6 @@ export default function RegisterPage() {
           onChange={(e) => setForm({ ...form, email: e.target.value })}
           className="w-full bg-gray-900 border border-gray-700 text-white text-sm px-3 py-2 mb-2 outline-none"
         />
-
         <input
           type="password"
           placeholder="Password"
@@ -73,11 +92,9 @@ export default function RegisterPage() {
           onChange={(e) => setForm({ ...form, password: e.target.value })}
           className="w-full bg-gray-900 border border-gray-700 text-white text-sm px-3 py-2 mb-4 outline-none"
         />
-
         {error && (
           <p className="text-red-500 text-xs mb-3 text-center">{error}</p>
         )}
-
         <button
           onClick={handleRegister}
           disabled={loading}
@@ -85,7 +102,6 @@ export default function RegisterPage() {
         >
           {loading ? "Signing up..." : "Sign up"}
         </button>
-
         <div className="text-center text-gray-500 text-xs">
           Already have an account?{" "}
           <Link href="/login" className="text-blue-400">

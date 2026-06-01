@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import Image from "next/image";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import {
   X,
@@ -207,7 +207,7 @@ function CommentSection({
   postId: string;
   userId: string;
 }) {
-  const { data: session } = useSession();
+  const { user } = useAuth();
   const [comments, setComments] = useState<Comment[]>([]);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(true);
@@ -257,7 +257,7 @@ function CommentSection({
       const res = await fetch(`/api/posts/${postId}/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.user?.token ?? ""}`,
+          Authorization: `Bearer ${await user?.getIdToken() ?? ""}`,
         },
         body: JSON.stringify({
           authorId: userId,
@@ -682,7 +682,7 @@ function CommentSection({
             placeholder={
               replyingTo
                 ? `Reply to @${replyingTo.username}...`
-                : "Add a comment..."
+                : "comment..."
             }
             className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-neutral-600"
           />
@@ -995,16 +995,16 @@ function LightboxModal({
 }
 
 export default function ExplorePage() {
-  const { data: session } = useSession();
+  const { user } = useAuth();
   const router = useRouter();
   const [posts, setPosts] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
-  const userId = session?.user?.id ?? "";
+  const userId = user?.uid ?? "";
 
   useEffect(() => {
-    if (session === undefined) return;
+    if (user === undefined) return;
     const load = async () => {
       try {
         const res = await fetch(`${API_URL}/posts?limit=30&userId=${userId}`);
@@ -1021,7 +1021,7 @@ export default function ExplorePage() {
       }
     };
     void load();
-  }, [session, userId]);
+  }, [user, userId]);
 
   const handlePrev = useCallback(() => {
     setSelectedIndex((i) => (i !== null && i > 0 ? i - 1 : i));

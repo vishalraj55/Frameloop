@@ -7,43 +7,42 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(uuid())
-  username  String    @unique
-  email     String    @unique
-  password  String
-  avatarUrl String?
-  bio       String?
-  fullName            String?
-  website             String?
-  pronouns            String?
-  gender              String?
-  isPrivate           Boolean   @default(false)
-  showActivityStatus  Boolean   @default(true)
-  allowStoryResharing Boolean   @default(true)
-  links               Json      @default("[]")
-  posts     Post[]
-  likes     Like[]
-  stories   Story[]
-  comments  Comment[]
-  commentLikes   CommentLike[]
-  commentReports CommentReport[]
-  createdAt DateTime  @default(now())
-  following Follow[]  @relation("following")
-  followers Follow[]  @relation("followers")
-  storyViews     StoryView[]
-  notificationsReceived Notification[] @relation("NotificationReceiver")
-  notificationsSent     Notification[] @relation("NotificationSender")
+  id                    String          @id
+  username              String          @unique
+  email                 String          @unique
+  avatarUrl             String?
+  bio                   String?
+  fullName              String?
+  website               String?
+  pronouns              String?
+  gender                String?
+  isPrivate             Boolean         @default(false)
+  showActivityStatus    Boolean         @default(true)
+  allowStoryResharing   Boolean         @default(true)
+  links                 Json            @default("[]")
+  posts                 Post[]
+  likes                 Like[]
+  stories               Story[]
+  comments              Comment[]
+  commentLikes          CommentLike[]
+  commentReports        CommentReport[]
+  createdAt             DateTime        @default(now())
+  following             Follow[]        @relation("following")
+  followers             Follow[]        @relation("followers")
+  storyViews            StoryView[]
+  notificationsReceived Notification[]  @relation("NotificationReceiver")
+  notificationsSent     Notification[]  @relation("NotificationSender")
 }
 
 model Post {
-  id        String    @id @default(uuid())
-  imageUrl  String
-  caption   String?
-  authorId  String
-  author    User      @relation(fields: [authorId], references: [id])
-  likes     Like[]
-  comments  Comment[]
-  createdAt DateTime  @default(now())
+  id            String         @id @default(uuid())
+  imageUrl      String
+  caption       String?
+  authorId      String
+  author        User           @relation(fields: [authorId], references: [id])
+  likes         Like[]
+  comments      Comment[]
+  createdAt     DateTime       @default(now())
   notifications Notification[]
 }
 
@@ -76,13 +75,13 @@ model Comment {
   authorId  String
   parentId  String?
 
-  post    Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  author  User     @relation(fields: [authorId], references: [id])
-  parent  Comment? @relation("Replies", fields: [parentId], references: [id])
+  post    Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author  User      @relation(fields: [authorId], references: [id])
+  parent  Comment?  @relation("Replies", fields: [parentId], references: [id])
   replies Comment[] @relation("Replies")
 
-  likes   CommentLike[]
-  reports CommentReport[]
+  likes         CommentLike[]
+  reports       CommentReport[]
   notifications Notification[]
 }
 
@@ -106,10 +105,10 @@ model CommentReport {
 }
 
 model Story {
-  id        String   @id @default(uuid())
+  id        String      @id @default(uuid())
   imageUrl  String
   authorId  String
-  author    User     @relation(fields: [authorId], references: [id])
+  author    User        @relation(fields: [authorId], references: [id])
   expiresAt DateTime
   createdAt DateTime    @default(now())
   views     StoryView[]
@@ -127,20 +126,20 @@ model StoryView {
 }
 
 model Notification {
-  id         String   @id @default(cuid())
-  type       String   
-  read       Boolean  @default(false)
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  type      String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
 
   receiverId String
-  receiver   User     @relation("NotificationReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  receiver   User   @relation("NotificationReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
 
-  senderId   String
-  sender     User     @relation("NotificationSender", fields: [senderId], references: [id], onDelete: Cascade)
+  senderId String
+  sender   User   @relation("NotificationSender", fields: [senderId], references: [id], onDelete: Cascade)
 
-  postId     String?
-  post       Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId String?
+  post   Post?   @relation(fields: [postId], references: [id], onDelete: Cascade)
 
-  commentId  String?
-  comment    Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  commentId String?
+  comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
 }

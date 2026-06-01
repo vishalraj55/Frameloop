@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useSession, signOut } from "next-auth/react";
+import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
@@ -339,7 +339,7 @@ function SectionTopBar({
 }
 
 export default function SettingsPage() {
-  const { data: session, update, status } = useSession();
+  const { username, user, loading, logout } = useAuth();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -402,14 +402,14 @@ export default function SettingsPage() {
 
   // Load profile
   useEffect(() => {
-    if (status === "loading") return;
-    if (!session?.user?.username) {
+    if (loading) return;
+    if (!username) {
       router.push("/login");
       return;
     }
     (async () => {
       try {
-        const res = await fetch(`/api/users/${session.user.username}`);
+        const res = await fetch(`/api/users/${username}`);
         if (!res.ok) return;
         const d = await res.json();
         setProfile({
@@ -433,7 +433,7 @@ export default function SettingsPage() {
         console.error(e);
       }
     })();
-  }, [session?.user?.username, status, router]);
+  }, [username, loading, router]);
 
   const flash = (msg: "success" | "error") => {
     setSaveMsg(msg);
@@ -455,13 +455,12 @@ export default function SettingsPage() {
       );
       fd.append("links", JSON.stringify(profile.links));
       if (avatarFile) fd.append("avatar", avatarFile);
-      const res = await fetch(`/api/users/${session?.user?.username}`, {
+      const res = await fetch(`/api/users/${username}`, {
         method: "PATCH",
-        headers: { Authorization: `Bearer ${session?.user?.token}` },
+        headers: { Authorization: `Bearer ${await user!.getIdToken()}` },
         body: fd,
       });
       if (!res.ok) throw new Error();
-      await update({ username: profile.username });
       flash("success");
     } catch {
       flash("error");
@@ -479,9 +478,9 @@ export default function SettingsPage() {
       fd.append("allowStoryResharing", String(privacy.allowStoryResharing));
       fd.append("allowTagging", String(privacy.allowTagging));
       fd.append("allowDMs", privacy.allowDMs);
-      const res = await fetch(`/api/users/${session?.user?.username}`, {
+      const res = await fetch(`/api/users/${username}`, {
         method: "PATCH",
-        headers: { Authorization: `Bearer ${session?.user?.token}` },
+        headers: { Authorization: `Bearer ${await user!.getIdToken()}` },
         body: fd,
       });
       if (!res.ok) throw new Error();
@@ -500,14 +499,20 @@ export default function SettingsPage() {
     }
     setSaving(true);
     try {
-      await fetch(`/api/users/${session?.user?.username}/password`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          currentPassword: passwords.current,
-          newPassword: passwords.next,
-        }),
-      });
+      const {
+        updatePassword,
+        EmailAuthProvider,
+        reauthenticateWithCredential,
+      } = await import("firebase/auth");
+      if (!user || !user.email) throw new Error();
+
+      const credential = EmailAuthProvider.credential(
+        user.email,
+        passwords.current,
+      );
+      await reauthenticateWithCredential(user, credential);
+      await updatePassword(user, passwords.next);
+
       flash("success");
       setPasswords({ current: "", next: "", confirm: "" });
     } catch {
@@ -524,7 +529,7 @@ export default function SettingsPage() {
     setAvatarPreview(URL.createObjectURL(file));
   };
 
-  if (status === "loading")
+  if (loading)
     return (
       <main className="min-h-screen flex items-center justify-center bg-black">
         <div className="w-7 h-7 border-2 border-neutral-800 border-t-white rounded-full animate-spin" />
@@ -654,7 +659,7 @@ export default function SettingsPage() {
         <SectionLabel c={c} text="Account" />
         <Card c={c}>
           <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
+            onClick={() => void logout().then(() => router.push("/login"))}
             className="w-full flex items-center gap-4 px-4 py-4 active:opacity-60 transition-opacity"
           >
             <div

@@ -3,7 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState, useSyncExternalStore, useRef } from "react";
-import { useSession } from "next-auth/react";
+import { onAuthStateChanged, User } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import { Plus } from "lucide-react";
 
 interface StoryType {
@@ -151,8 +152,14 @@ async function compressVideo(file: File): Promise<Blob> {
 }
 
 export default function StoriesBar() {
-  const { data: session, status } = useSession();
-  const token = session?.user?.token ?? null;
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const [stories, setStories] = useState<StoryType[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -175,7 +182,12 @@ export default function StoriesBar() {
   const fetchStories = async () => {
     try {
       const headers: HeadersInit = {};
-      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      if (user) {
+        const token = await user.getIdToken();
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/stories`, {
         headers,
       });
@@ -187,12 +199,15 @@ export default function StoriesBar() {
   };
 
   useEffect(() => {
-    if (status === "loading") return;
-
     const fetchStories = async () => {
       try {
         const headers: HeadersInit = {};
-        if (token) headers["Authorization"] = `Bearer ${token}`;
+
+        if (user) {
+          const token = await user.getIdToken();
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/stories`, {
           headers,
         });
@@ -203,13 +218,12 @@ export default function StoriesBar() {
       }
     };
     void fetchStories();
-  }, [token, status]);
-
+  }, [user]);
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const authorId = session?.user?.id;
+    const authorId = user?.uid;
     if (!authorId) {
       alert("You must be logged in to post a story.");
       return;
@@ -239,15 +253,16 @@ export default function StoriesBar() {
 
       const ext = isImage ? "jpg" : "webm";
       const compressedFile = new File([compressed], `story.${ext}`, {
-        type: isImage ? "image/jpeg" : "video/webm", 
+        type: isImage ? "image/jpeg" : "video/webm",
       });
 
+      const token = await user!.getIdToken();
       const form = new FormData();
       form.append("image", compressedFile);
-      form.append("authorId", authorId);
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/stories`, {
         method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
         body: form,
       });
 

@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
@@ -18,15 +16,14 @@ interface Post {
 
 export async function POST(req: NextRequest, { params }: Params) {
   const { id } = await params;
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
+  const auth = req.headers.get("Authorization");
 
   const res = await fetch(`${BACKEND_URL}/posts/${id}/like`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ userId: session.user.id }),
+    headers: {
+      "Content-Type": "application/json",
+      ...(auth && { Authorization: auth }),
+    },
   });
 
   const data = await res.json();
@@ -34,7 +31,6 @@ export async function POST(req: NextRequest, { params }: Params) {
 }
 export async function GET(req: NextRequest, { params }: Params) {
   const { id } = await params;
-  const session = await getServerSession(authOptions);
 
   const res = await fetch(`${BACKEND_URL}/posts/${id}`, {
     method: "GET",
@@ -43,9 +39,6 @@ export async function GET(req: NextRequest, { params }: Params) {
 
   const post: Post = await res.json();
   const count = post?.likes?.length ?? 0;
-  const liked = session?.user?.id
-    ? post?.likes?.some((l: Like) => l.userId === session.user.id)
-    : false;
 
-  return NextResponse.json({ liked, count });
+  return NextResponse.json({ liked: false, count });
 }

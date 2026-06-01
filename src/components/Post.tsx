@@ -2,8 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRef, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useRef, useState, useEffect } from "react";
+import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import CommentSheet from "./CommentSheet";
 import {
@@ -243,19 +243,24 @@ export default function Post({
   isFollowing: initialIsFollowing = false,
   onDelete,
 }: PostProps) {
-  const { data: session } = useSession();
+  const { user, username: currentUsername, loading: authLoading } = useAuth();
   const router = useRouter();
   const lastTapRef = useRef(0);
-  const isOwner = session?.user?.username === username;
+const isOwner = currentUsername === username
 
-  const [liked, setLiked] = useState(initialIsLiked);
+  const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(likes ?? 0);
   const [likeLoading, setLikeLoading] = useState(false);
 
   const [saved, setSaved] = useState(() => getStored("savedPosts").includes(id));
   const [hidden, setHidden] = useState(() => getStored("hiddenPosts").includes(id));
-  const [following, setFollowing] = useState(initialIsFollowing);
+  const [following, setFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
+  useEffect(() => {
+  if (authLoading) return;
+  setLiked(initialIsLiked);
+  setFollowing(initialIsFollowing);
+}, [authLoading, initialIsLiked, initialIsFollowing]);
   const [heartBurst, setHeartBurst] = useState(false);
   const [commentOpen, setCommentOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
@@ -278,7 +283,12 @@ export default function Post({
     setLikeCount((p) => (wasLiked ? p - 1 : p + 1));
     setLikeLoading(true);
     try {
-      const res = await fetch(`/api/posts/${id}/like`, { method: "POST" });
+      const token = user ? await user.getIdToken() : null;
+      const res = await fetch(`/api/posts/${id}/like`, 
+        {method: "POST",headers: {
+    ...(token && { Authorization: `Bearer ${token}` }),
+  },
+});
       if (!res.ok) throw new Error();
       const data = await res.json() as { liked: boolean; count: number };
       setLiked(data.liked);
@@ -293,7 +303,7 @@ export default function Post({
   }
 
   async function toggleFollow() {
-    if (!session?.user?.id || followLoading) return;
+    if (!user?.uid || followLoading) return;
     const wasFollowing = following;
     setFollowing(!wasFollowing);
     setFollowLoading(true);
@@ -302,9 +312,9 @@ export default function Post({
         method: wasFollowing ? "DELETE" : "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session.user.token}`,
+          Authorization: `Bearer ${await user.getIdToken()}`,
         },
-        body: JSON.stringify({ followerId: session.user.id }),
+        body: JSON.stringify({ followerId: user.uid }),
       });
       if (!res.ok) throw new Error();
       showToast(wasFollowing ? `Unfollowed @${username}` : `Following @${username}`, "success");
@@ -418,8 +428,8 @@ export default function Post({
             <span className="text-sm font-semibold text-white">{username}</span>
           </Link>
 
-          <div className="flex items-center gap-2">
-            {!isOwner && session?.user && !following && (
+          {/* <div className="flex items-center gap-2">
+            {!isOwner && user && !following && (
               <button
                 onClick={() => void toggleFollow()}
                 disabled={followLoading}
@@ -433,7 +443,10 @@ export default function Post({
             <button onClick={() => setMenuOpen(true)} className="p-1.5 -mr-1 active:opacity-60">
               <MoreHorizontal size={20} className="text-white" />
             </button>
-          </div>
+          </div> */}
+            <button onClick={() => setMenuOpen(true)} className="p-1.5 -mr-1 active:opacity-60">
+              <MoreHorizontal size={20} className="text-white" />
+            </button>
         </div>
 
         {/*  Image  */}

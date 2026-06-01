@@ -2,7 +2,7 @@
 
 import { useMemo, useCallback, useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import { useSession, signOut } from "next-auth/react";
+import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import {
   Settings,
@@ -13,6 +13,7 @@ import {
   X,
 } from "lucide-react";
 import Image from "next/image";
+import { auth } from "@/lib/firebase";
 
 type Params = { username?: string };
 
@@ -182,7 +183,7 @@ function NotificationList({
 }
 
 export default function TopBar() {
-  const { data } = useSession();
+  const [user, setUser] = useState<User | null>(null);
   const pathname = usePathname();
   const router = useRouter();
   const { username } = useParams<Params>();
@@ -191,11 +192,20 @@ export default function TopBar() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [myUsername, setMyUsername] = useState<string | null>(null);
 
   const unread = useMemo(
     () => notifications.filter((n) => !n.read).length,
     [notifications],
   );
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 640);
@@ -205,27 +215,34 @@ export default function TopBar() {
   }, []);
 
   useEffect(() => {
-    if (!data?.user) return;
-    const load = async () => {
-      try {
-        const res = await fetch("/api/notifications", {
-          headers: { Authorization: `Bearer ${data.user.token}` },
-        });
-        if (res.ok) setNotifications(await res.json());
-      } catch {}
-    };
-    void load();
-    const interval = setInterval(load, 30000);
-    return () => clearInterval(interval);
-  }, [data?.user]);
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setMyUsername(currentUser?.displayName ?? null);
+    });
+    return () => unsubscribe();
+  }, []);
 
+  useEffect(() => {
+  if (!user) return;
+  const load = async () => {
+    const token = await user.getIdToken();
+    const res = await fetch("/api/notifications", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) {
+      const data = await res.json() as Notification[];
+      setNotifications(data);
+    }
+  };
+  void load();
+}, [user]);
   const handleBell = async () => {
     const next = !open;
     setOpen(next);
     if (next && unread > 0) {
       await fetch("/api/notifications", {
         method: "PATCH",
-        headers: { Authorization: `Bearer ${data?.user?.token}` },
+        headers: { Authorization: `Bearer ${await user?.getIdToken()}` },
       });
       setNotifications((p) => p.map((n) => ({ ...n, read: true })));
     }
@@ -244,8 +261,8 @@ export default function TopBar() {
   );
 
   const isOwnProfile = useMemo(
-    () => isProfile && data?.user?.username === username,
-    [isProfile, data?.user?.username, username],
+    () => isProfile && myUsername === username,
+    [isProfile, myUsername, username],
   );
 
   const title = useMemo(() => {
@@ -263,10 +280,10 @@ export default function TopBar() {
     [isProfile],
   );
 
-  const handleSignOut = useCallback(
-    () => signOut({ callbackUrl: "/login" }),
-    [],
-  );
+  const handleSignOut = useCallback(async () => {
+    await signOut(auth);
+    router.push("/login");
+  }, [router]);
   const handleClose = useCallback(() => setOpen(false), []);
   const handleNavigate = useCallback(
     (url: string) => router.push(url),
@@ -286,7 +303,7 @@ export default function TopBar() {
           </h1>
 
           <div className="flex items-center gap-1">
-            {data && (
+            {user && (
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => void handleBell()}
@@ -312,7 +329,8 @@ export default function TopBar() {
                         "0 8px 32px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4)",
                     }}
                   >
-                    <div className="flex items-center justify-between px-4 py-3"
+                    <div
+                      className="flex items-center justify-between px-4 py-3"
                       style={{
                         borderBottom: "1px solid rgba(255,255,255,0.06)",
                       }}
@@ -369,7 +387,7 @@ export default function TopBar() {
               </button>
             )}
 
-            {data ? (
+            {user ? (
               <button
                 onClick={handleSignOut}
                 className="p-2 rounded-full hover:bg-[#1a1a1a] transition"

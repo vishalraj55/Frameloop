@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { useSession } from "next-auth/react";
 import Post from "@/components/Post";
 import StoriesBar from "@/components/StoriesBar";
+import { useAuth } from "@/context/AuthContext";
 
 interface PostType {
   id: string;
@@ -144,7 +144,7 @@ function EmptyFeed() {
 /*Page*/
 
 export default function FeedPage() {
-  const { data: session } = useSession();
+  const { user, loading: authLoading } = useAuth();
   const [posts, setPosts] = useState<PostType[]>([]);
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [hasMore, setHasMore] = useState(true);
@@ -186,13 +186,13 @@ export default function FeedPage() {
   );
 
   useEffect(() => {
-    if (session === undefined) return;
+    if (authLoading) return;
     const load = async () => {
       await fetchPosts(undefined, true);
       setInitialLoading(false);
     };
     void load();
-  }, [fetchPosts, session]);
+  }, [fetchPosts, authLoading]);
 
   useEffect(() => {
     if (!sentinelRef.current) return;
@@ -279,9 +279,7 @@ export default function FeedPage() {
                   imageUrl={post.imageUrl}
                   caption={post.caption ?? ""}
                   likes={post.likes.length}
-                  isLiked={post.likes.some(
-                    (l) => l.userId === session?.user?.id,
-                  )}
+                  isLiked={post.likes.some((l) => l.userId === user?.uid)}
                   createdAt={post.createdAt ?? ""}
                   isFollowing={post.author.isFollowing ?? false}
                   priority={index === 0}

@@ -18,8 +18,9 @@ import { memoryStorage } from 'multer';
 import { Readable } from 'stream';
 import { v2 as cloudinary } from 'cloudinary';
 import { PostsService } from './posts.service';
-import { LikeDto } from './dto/like.dto';
-import { OptionalJwtAuthGuard } from '../auth/optional-jwt-auth.guard';
+import { FirebaseAuthGuard } from '../firebase/firebase-auth.guard';
+import type { AuthRequest } from '../firebase/firebase-auth.types';
+import { OptionalFirebaseAuthGuard } from '../auth/optional-firebase-auth.guard';
 import type { Request } from 'express';
 
 @Controller('posts')
@@ -27,7 +28,7 @@ export class PostsController {
   constructor(private postsService: PostsService) {}
 
   @Get()
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(OptionalFirebaseAuthGuard)
   getFeed(
     @Query('cursor') cursor?: string,
     @Query('limit') limit?: string,
@@ -79,8 +80,9 @@ export class PostsController {
   }
 
   @Post(':id/like')
-  like(@Param('id') id: string, @Body() body: LikeDto) {
-    return this.postsService.likePost(id, body.userId);
+  @UseGuards(FirebaseAuthGuard)
+  like(@Param('id') id: string, @Req() req: AuthRequest) {
+    return this.postsService.likePost(id, req.user!.id);
   }
 
   @Delete(':id')

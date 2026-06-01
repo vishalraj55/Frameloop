@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { useSession } from "next-auth/react";
+import { onAuthStateChanged, User } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import {
   X,
   Heart,
@@ -55,7 +56,15 @@ function getRelativeTime(dateStr: string): string {
   if (days < 7) return `${days}d`;
   return `${weeks}w`;
 }
-function Avatar({ src, name, size = 32,}: { src?: string | null; name?: string | null; size?: number; }) {
+function Avatar({
+  src,
+  name,
+  size = 32,
+}: {
+  src?: string | null;
+  name?: string | null;
+  size?: number;
+}) {
   return (
     <div
       className="relative rounded-full overflow-hidden shrink-0 bg-neutral-700"
@@ -95,7 +104,9 @@ function CommentInput({
         <div className="flex items-center justify-between px-4 pt-2.5">
           <span className="text-neutral-400 text-xs">
             Replying to{" "}
-            <span className="text-white font-semibold">@{replyingTo.username}</span>
+            <span className="text-white font-semibold">
+              @{replyingTo.username}
+            </span>
           </span>
           <button onClick={onCancelReply}>
             <X size={14} className="text-neutral-500" />
@@ -141,7 +152,7 @@ export default function CommentSheet({
   postCaption,
   postCreatedAt,
 }: Props) {
-  const { data: session } = useSession();
+  const [user, setUser] = useState<User | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
@@ -164,7 +175,14 @@ export default function CommentSheet({
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
-  const userId = session?.user?.id ?? "";
+  const userId = user?.uid ?? "";
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -196,7 +214,7 @@ export default function CommentSheet({
   }, []);
 
   const handlePost = async () => {
-    if (!text.trim() || !session?.user) return;
+    if (!text.trim() || !user) return;
     setPosting(true);
     try {
       const res = await fetch(`/api/posts/${postId}/comments`, {
@@ -313,7 +331,11 @@ export default function CommentSheet({
       const res = await fetch(`/api/posts/${postId}/comments`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ commentId, action: "edit", text: editText.trim() }),
+        body: JSON.stringify({
+          commentId,
+          action: "edit",
+          text: editText.trim(),
+        }),
       });
       const updated = (await res.json()) as Comment;
       const replace = (c: Comment) =>
@@ -358,8 +380,15 @@ export default function CommentSheet({
     });
 
   const renderRow = (comment: Comment, parentId?: string, isReply = false) => (
-    <div key={comment.id} className={`group flex items-start gap-3 ${isReply ? "pl-11" : ""}`}>
-      <Avatar src={comment.author.avatarUrl} name={comment.author.username} size={32} />
+    <div
+      key={comment.id}
+      className={`group flex items-start gap-3 ${isReply ? "pl-11" : ""}`}
+    >
+      <Avatar
+        src={comment.author.avatarUrl}
+        name={comment.author.username}
+        size={32}
+      />
       <div className="flex-1 min-w-0">
         {editingId === comment.id ? (
           <div className="flex items-center gap-2">
@@ -368,34 +397,64 @@ export default function CommentSheet({
               value={editText}
               onChange={(e) => setEditText(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") void handleEditSave(comment.id, parentId);
-                if (e.key === "Escape") { setEditingId(null); setEditText(""); }
+                if (e.key === "Enter")
+                  void handleEditSave(comment.id, parentId);
+                if (e.key === "Escape") {
+                  setEditingId(null);
+                  setEditText("");
+                }
               }}
               className="flex-1 bg-neutral-700 text-white text-sm px-3 py-1.5 rounded-lg outline-none"
             />
-            <button onClick={() => void handleEditSave(comment.id, parentId)}
-              className="text-[#0095f6] text-xs font-semibold">Save</button>
-            <button onClick={() => { setEditingId(null); setEditText(""); }}
-              className="text-neutral-500 text-xs">Cancel</button>
+            <button
+              onClick={() => void handleEditSave(comment.id, parentId)}
+              className="text-[#0095f6] text-xs font-semibold"
+            >
+              Save
+            </button>
+            <button
+              onClick={() => {
+                setEditingId(null);
+                setEditText("");
+              }}
+              className="text-neutral-500 text-xs"
+            >
+              Cancel
+            </button>
           </div>
         ) : (
           <>
             <p className="text-white text-sm leading-snug">
-              <span className="font-semibold mr-1">{comment.author.username}</span>
-              <span className={comment.isDeleted ? "text-neutral-500 italic" : "text-neutral-200"}>
+              <span className="font-semibold mr-1">
+                {comment.author.username}
+              </span>
+              <span
+                className={
+                  comment.isDeleted
+                    ? "text-neutral-500 italic"
+                    : "text-neutral-200"
+                }
+              >
                 {comment.isDeleted ? "This comment was deleted." : comment.text}
               </span>
             </p>
             <div className="flex items-center gap-3 mt-1.5">
-              <span className="text-neutral-500 text-xs">{getRelativeTime(comment.createdAt)}</span>
+              <span className="text-neutral-500 text-xs">
+                {getRelativeTime(comment.createdAt)}
+              </span>
               {!comment.isDeleted && (
                 <>
                   {comment.likesCount > 0 && (
-                    <span className="text-neutral-500 text-xs font-semibold">{comment.likesCount} likes</span>
+                    <span className="text-neutral-500 text-xs font-semibold">
+                      {comment.likesCount} likes
+                    </span>
                   )}
                   <button
                     onClick={() => {
-                      setReplyingTo({ id: parentId ?? comment.id, username: comment.author.username });
+                      setReplyingTo({
+                        id: parentId ?? comment.id,
+                        username: comment.author.username,
+                      });
                       inputRef.current?.focus();
                     }}
                     className="text-neutral-500 hover:text-white text-xs font-semibold transition-colors"
@@ -410,15 +469,24 @@ export default function CommentSheet({
       </div>
       {!comment.isDeleted && (
         <div className="flex flex-col items-center gap-1 shrink-0 pt-0.5">
-          <button onClick={() => void handleLike(comment.id, parentId)}
-            className="transition-transform active:scale-125">
-            <Heart size={12} className={
-              comment.likedByMe ? "fill-red-500 text-red-500" : "text-neutral-400 hover:text-neutral-200"
-            } />
+          <button
+            onClick={() => void handleLike(comment.id, parentId)}
+            className="transition-transform active:scale-125"
+          >
+            <Heart
+              size={12}
+              className={
+                comment.likedByMe
+                  ? "fill-red-500 text-red-500"
+                  : "text-neutral-400 hover:text-neutral-200"
+              }
+            />
           </button>
           <div className="relative" data-menu>
             <button
-              onClick={() => setMenuOpenId(menuOpenId === comment.id ? null : comment.id)}
+              onClick={() =>
+                setMenuOpenId(menuOpenId === comment.id ? null : comment.id)
+              }
               className="text-neutral-500 hover:text-white transition-colors p-1 rounded-full hover:bg-neutral-700 opacity-0 group-hover:opacity-100"
             >
               <MoreHorizontal size={15} />
@@ -428,17 +496,23 @@ export default function CommentSheet({
                 {comment.author.id === userId ? (
                   <>
                     <button
-                      onClick={() => { setEditingId(comment.id); setEditText(comment.text); setMenuOpenId(null); }}
+                      onClick={() => {
+                        setEditingId(comment.id);
+                        setEditText(comment.text);
+                        setMenuOpenId(null);
+                      }}
                       className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-neutral-200 hover:bg-neutral-800 hover:text-white transition-colors"
                     >
-                      <Pencil size={13} className="text-neutral-400" /><span>Edit</span>
+                      <Pencil size={13} className="text-neutral-400" />
+                      <span>Edit</span>
                     </button>
                     <div className="mx-3 h-px bg-neutral-700/60" />
                     <button
                       onClick={() => void handleDelete(comment.id, parentId)}
                       className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-400 hover:bg-neutral-800 hover:text-red-300 transition-colors"
                     >
-                      <Trash2 size={13} className="text-red-400" /><span>Delete</span>
+                      <Trash2 size={13} className="text-red-400" />
+                      <span>Delete</span>
                     </button>
                   </>
                 ) : (
@@ -458,12 +532,14 @@ export default function CommentSheet({
   );
 
   const renderList = () => {
-    if (loading) return (
+    if (loading)
+      return (
         <div className="flex justify-center py-8">
           <div className="w-5 h-5 border-2 border-neutral-700 border-t-white rounded-full animate-spin" />
         </div>
       );
-    if (comments.length === 0) return (
+    if (comments.length === 0)
+      return (
         <div className="flex flex-col items-center justify-center py-12 gap-2">
           <p className="text-white text-sm font-semibold">No comments yet</p>
           <p className="text-neutral-500 text-xs">Start the conversation</p>
@@ -481,15 +557,21 @@ export default function CommentSheet({
               >
                 <span className="w-5 h-px bg-neutral-600 inline-block" />
                 {expandedReplies.has(comment.id) ? (
-                  <><ChevronUp size={12} /> Hide replies</>
+                  <>
+                    <ChevronUp size={12} /> Hide replies
+                  </>
                 ) : (
-                  <><ChevronDown size={12} /> View {comment.replies!.length}{" "}
-                    {comment.replies!.length === 1 ? "reply" : "replies"}</>
+                  <>
+                    <ChevronDown size={12} /> View {comment.replies!.length}{" "}
+                    {comment.replies!.length === 1 ? "reply" : "replies"}
+                  </>
                 )}
               </button>
             )}
             {expandedReplies.has(comment.id) &&
-              comment.replies?.map((reply) => renderRow(reply, comment.id, true))}
+              comment.replies?.map((reply) =>
+                renderRow(reply, comment.id, true),
+              )}
           </div>
         ))}
       </>
@@ -528,7 +610,10 @@ export default function CommentSheet({
                 <X size={20} className="text-neutral-400" />
               </button>
             </div>
-            <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-4">
+            <div
+              ref={listRef}
+              className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-4"
+            >
               {renderList()}
             </div>
             <CommentInput {...inputProps} />
@@ -546,26 +631,44 @@ export default function CommentSheet({
         >
           <div className="flex items-center justify-between px-4 py-1 border-b border-neutral-800 shrink-0">
             <div className="flex items-center gap-3">
-              <Avatar src={postAuthor?.avatarUrl} name={postAuthor?.username} size={36} />
+              <Avatar
+                src={postAuthor?.avatarUrl}
+                name={postAuthor?.username}
+                size={36}
+              />
               <span className="text-white text-sm font-semibold">
                 {postAuthor?.username ?? "User"}
               </span>
             </div>
-            <button onClick={onClose} className="text-neutral-400 hover:text-white transition-colors ml-auto">
+            <button
+              onClick={onClose}
+              className="text-neutral-400 hover:text-white transition-colors ml-auto"
+            >
               <X size={20} />
             </button>
           </div>
-          <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4">
+          <div
+            ref={listRef}
+            className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4"
+          >
             {postCaption && postAuthor && (
               <div className="group flex items-start gap-3">
-                <Avatar src={postAuthor.avatarUrl} name={postAuthor.username} size={32} />
+                <Avatar
+                  src={postAuthor.avatarUrl}
+                  name={postAuthor.username}
+                  size={32}
+                />
                 <div className="flex-1 min-w-0">
                   <p className="text-white text-sm leading-snug">
-                    <span className="font-semibold mr-1">{postAuthor.username}</span>
+                    <span className="font-semibold mr-1">
+                      {postAuthor.username}
+                    </span>
                     <span className="text-neutral-200">{postCaption}</span>
                   </p>
                   {postCreatedAt && (
-                    <p className="text-neutral-500 text-xs mt-1.5">{getRelativeTime(postCreatedAt)}</p>
+                    <p className="text-neutral-500 text-xs mt-1.5">
+                      {getRelativeTime(postCreatedAt)}
+                    </p>
                   )}
                 </div>
               </div>

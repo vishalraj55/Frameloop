@@ -4,10 +4,13 @@ import { memoryStorage } from 'multer';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 import { PrismaService } from '../prisma/prisma.service';
-import { AuthModule } from '../auth/auth.module';
+import { FirebaseModule } from '../firebase/firebase.module';
 
 @Module({
-  imports: [MulterModule.register({ storage: memoryStorage() }), AuthModule],
+  imports: [
+    MulterModule.register({ storage: memoryStorage() }),
+    FirebaseModule,
+  ],
   controllers: [UsersController],
   providers: [UsersService, PrismaService],
 })

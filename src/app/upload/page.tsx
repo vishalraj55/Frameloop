@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { X, ImagePlus } from "lucide-react";
@@ -26,7 +26,7 @@ const filters: Record<FilterType, string> = {
 };
 
 export default function UploadPage() {
-  const { data: session } = useSession();
+  const { user } = useAuth();
   const router = useRouter();
 
   const [file, setFile] = useState<File | null>(null);
@@ -78,7 +78,7 @@ export default function UploadPage() {
   }
 
   async function handlePost() {
-    if (!file || !session?.user?.id) return;
+    if (!file || !user?.uid) return;
 
     setPosting(true);
 
@@ -91,7 +91,7 @@ export default function UploadPage() {
       const formData = new FormData();
       formData.append("image", finalFile);
       formData.append("caption", caption);
-      formData.append("authorId", session.user.id);
+      formData.append("authorId", user.uid);
 
       const res = await fetch("http://localhost:3000/posts", {
         method: "POST",
@@ -117,7 +117,7 @@ export default function UploadPage() {
           {preview && (
             <button
               onClick={handlePost}
-              disabled={posting || !session}
+              disabled={posting || !user}
               className="text-sm font-semibold text-blue-500 disabled:opacity-50"
             >
               {posting ? "Posting..." : "Share"}
@@ -216,7 +216,7 @@ export default function UploadPage() {
         {preview && (
           <button
             onClick={handlePost}
-            disabled={posting || !session}
+            disabled={posting || !user}
             className={`w-full py-3 rounded-xl text-sm font-semibold ${
               posting
                 ? "bg-neutral-700"
