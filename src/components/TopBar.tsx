@@ -293,7 +293,7 @@ export default function TopBar() {
 
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-50 bg-black border-b border-[#262626] h-12">
+      <header className="fixed inset-x-0 top-0 z-50 bg-black border-b border-[#191919] h-16">
         <div className="max-w-lg mx-auto h-full flex items-center justify-between px-4">
           <h1
             className="text-white text-lg tracking-wide select-none truncate max-w-[60%]"

@@ -296,7 +296,7 @@ export default function StoriesBar() {
           disabled={uploading}
           className="flex flex-col items-center gap-1 w-16.5 cursor-pointer disabled:opacity-60"
         >
-          <div className="relative w-15.5 h-15.5 rounded-full border border-[#262626] bg-[#1c1c1c] flex items-center justify-center">
+          <div className="relative w-18 h-18 rounded-full border border-[#262626] bg-[#1c1c1c] flex items-center justify-center">
             {uploading ? (
               <div className="w-5 h-5 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
             ) : (
