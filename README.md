@@ -408,11 +408,11 @@ Please follow [Conventional Commits](https://www.conventionalcommits.org/) for c
 
 ---
 
-## License
+<!-- ## License
 
 This project is open source. See the repository for license details.
 
----
+--- -->
 
 <div align="center">
   Built by <a href="https://github.com/vishalraj55">Vishal Rajbhar</a>
