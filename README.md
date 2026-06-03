@@ -378,15 +378,19 @@ The `vercel.json` at the repo root configures the frontend deployment:
 2. Set all `NEXT_PUBLIC_*` environment variables in the Vercel dashboard under **Settings → Environment Variables**.
 3. Push to `main` — Vercel automatically builds and deploys.
 
-### Backend — Recommended Platforms
+### Backend — Render
 
-The NestJS backend can be deployed to any Node.js-compatible host:
+The NestJS backend is hosted on [Render](https://render.com). Set the root directory to `backend/`, the start command to `pnpm run start:prod`, and add all backend env vars in the Render dashboard.
 
-- **Railway** — Connect the `backend/` subdirectory, set env vars, and Railway auto-detects NestJS.
-- **Render** — Use a Web Service pointed at the `backend/` folder with `pnpm run start:prod` as the start command.
-- **Fly.io** — Containerize with a `Dockerfile` in the `backend/` directory.
+### Database — Neon
 
-After deploying the backend, update `NEXT_PUBLIC_API_URL` in Vercel to point to your production backend URL.
+PostgreSQL is hosted on [Neon](https://neon.tech) (serverless Postgres). Copy the connection string from the Neon console and set it as `DATABASE_URL` in your Render environment variables.
+
+### Uptime — UptimeRobot
+
+Since Render's free tier spins down on inactivity, [UptimeRobot](https://uptimerobot.com) is configured to ping the backend every 5 minutes to keep it alive.
+
+After deploying, update `NEXT_PUBLIC_API_URL` in Vercel to point to your Render backend URL.
 
 ---
 
