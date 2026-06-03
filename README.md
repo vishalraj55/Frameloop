@@ -1,8 +1,4 @@
-<div align="center">
-  <img src="./public/banner.png" alt="Frameloop Logo" width="100%" />
-</div>
-
-# Frameloop
+<h1 align="center">FrameLoop</h1>
 
 <div align="center">
 
