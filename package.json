@@ -2,12 +2,12 @@
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
-    "dev": "cross-env NODE_OPTIONS=--max-old-space-size=1024 next dev",
-    "build": "cross-env NODE_OPTIONS=--max-old-space-size=1024 next build",
-    "start": "cross-env NODE_OPTIONS=--max-old-space-size=1024 next start",
-    "lint": "eslint"
-  },
+"scripts": {
+  "dev": "cross-env NODE_OPTIONS=--max-old-space-size=4096 next dev",
+  "build": "cross-env NODE_OPTIONS=--max-old-space-size=4096 next build",
+  "start": "cross-env NODE_OPTIONS=--max-old-space-size=4096 next start",
+  "lint": "eslint"
+},
   "dependencies": {
     "firebase": "^12.13.0",
     "lucide-react": "^1.7.0",

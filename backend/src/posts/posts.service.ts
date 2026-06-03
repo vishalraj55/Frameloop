@@ -12,40 +12,66 @@ export class PostsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getFeed(cursor?: string, limit = 10, viewerId?: string) {
-    const posts = await this.prisma.post.findMany({
-      take: limit,
-      ...(cursor && {
-        skip: 1,
-        cursor: { id: cursor },
-      }),
-      include: {
-        author: { select: authorSelect },
-        likes: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    if (!viewerId) {
+      const posts = await this.prisma.post.findMany({
+        take: limit,
+        ...(cursor && {
+          skip: 1,
+          cursor: { id: cursor },
+        }),
+        include: {
+          author: { select: authorSelect },
+          likes: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      return posts;
+    }
 
-    if (!viewerId) return posts;
-
-    const authorIds = [...new Set(posts.map((p) => p.author.id))];
-
-    const followings = await this.prisma.follow.findMany({
-      where: {
-        followerId: viewerId,
-        followingId: { in: authorIds },
-      },
+    const following = await this.prisma.follow.findMany({
+      where: { followerId: viewerId },
       select: { followingId: true },
     });
 
-    const followingSet = new Set(followings.map((f) => f.followingId));
+    const followingIds = following.map((f) => f.followingId);
+    const followingSet = new Set(followingIds);
 
-    return posts.map((post) => ({
-      ...post,
-      author: {
-        ...post.author,
-        isFollowing: followingSet.has(post.author.id),
-      },
+    const followedPosts =
+      followingIds.length > 0
+        ? await this.prisma.post.findMany({
+            take: limit,
+            ...(cursor && { skip: 1, cursor: { id: cursor } }),
+            where: { authorId: { in: followingIds } },
+            include: { author: { select: authorSelect }, likes: true },
+            orderBy: { createdAt: 'desc' },
+          })
+        : [];
+
+    const followedEnriched = followedPosts.map((p) => ({
+      ...p,
+      author: { ...p.author, isFollowing: true },
     }));
+
+    if (followedEnriched.length >= limit) return followedEnriched;
+
+    const remaining = limit - followedEnriched.length;
+
+    const otherPosts = await this.prisma.post.findMany({
+      take: remaining,
+      where: {
+        authorId: { notIn: [...followingIds, viewerId] },
+        id: { notIn: followedPosts.map((p) => p.id) },
+      },
+      include: { author: { select: authorSelect }, likes: true },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const otherEnriched = otherPosts.map((p) => ({
+      ...p,
+      author: { ...p.author, isFollowing: followingSet.has(p.author.id) },
+    }));
+
+    return [...followedEnriched, ...otherEnriched];
   }
 
   async findOne(id: string) {

@@ -157,33 +157,39 @@ export default function FeedPage() {
   const touchStartY = useRef(0);
   const pulling = useRef(false);
 
-  const fetchPosts = useCallback(
-    async (cursorParam?: string, replace = false) => {
-      try {
-        const params = new URLSearchParams();
-        params.set("limit", String(PAGE_SIZE));
-        if (cursorParam) params.set("cursor", cursorParam);
+const fetchPosts = useCallback(
+  async (cursorParam?: string, replace = false) => {
+    try {
+      const params = new URLSearchParams();
+      params.set("limit", String(PAGE_SIZE));
+      if (cursorParam) params.set("cursor", cursorParam);
 
-        const res = await fetch(`/api/posts?${params.toString()}`);
-        const data = (await res.json()) as PostType[];
+      const token = await user?.getIdToken();
+      const res = await fetch(`/api/posts?${params.toString()}`, {
+        headers: { ...(token && { Authorization: `Bearer ${token}` }) },
+      });
 
-        setPosts((prev) => {
-          if (replace) return data;
-          const seen = new Set(prev.map((p) => p.id));
-          return [...prev, ...data.filter((p) => !seen.has(p.id))];
-        });
+      const text = await res.text();
+      const data = JSON.parse(text) as PostType[];
+      if (!Array.isArray(data)) return;
 
-        setHasMore(data.length === PAGE_SIZE);
+      setPosts((prev) => {
+        if (replace) return data;
+        const seen = new Set(prev.map((p) => p.id));
+        return [...prev, ...data.filter((p) => !seen.has(p.id))];
+      });
+
+      setHasMore(data.length === PAGE_SIZE);
 
         if (data.length > 0) {
           setCursor(data[data.length - 1]!.id);
         }
-      } catch (err) {
-        console.error("Failed to fetch posts:", err);
-      }
-    },
-    [],
-  );
+    } catch (err) {
+      console.error("Failed to fetch posts:", err);
+    }
+  },
+  [user],
+);
 
   useEffect(() => {
     if (authLoading) return;
@@ -192,7 +198,7 @@ export default function FeedPage() {
       setInitialLoading(false);
     };
     void load();
-  }, [fetchPosts, authLoading]);
+  }, [fetchPosts, authLoading, user]);
 
   useEffect(() => {
     if (!sentinelRef.current) return;
