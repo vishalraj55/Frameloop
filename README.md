@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./public/banner.png" alt="Frameloop Logo" width="120" />
+  <img src="./public/banner.png" alt="Frameloop Logo" width="100%" />
 </div>
 
 # Frameloop
