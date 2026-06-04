@@ -135,6 +135,7 @@ export class UsersController {
   }
 
   @Delete(':id')
+  @UseGuards(FirebaseAuthGuard)
   deleteUser(@Param('id') id: string) {
     return this.usersService.deleteUser(id);
   }

@@ -31,7 +31,6 @@ export class UsersService {
       select: {
         id: true,
         username: true,
-        email: true,
         avatarUrl: true,
         bio: true,
         fullName: true,
