@@ -2,6 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 
 const API = process.env.API_URL;
 
+export async function POST(req: NextRequest) {
+  const auth = req.headers.get("Authorization");
+  const formData = await req.formData();
+
+  const res = await fetch(`${API}/posts`, {
+    method: "POST",
+    headers: {
+      ...(auth && { Authorization: auth }),
+    },
+    body: formData,
+  });
+
+  const data = await res.json();
+  return NextResponse.json(data, { status: res.status });
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const auth = req.headers.get("Authorization");

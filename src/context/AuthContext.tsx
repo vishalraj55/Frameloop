@@ -18,6 +18,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   username: string | null;
+  avatarUrl: string | null;
   logout: () => Promise<void>;
   getToken: () => Promise<string | null>;
 }
@@ -28,6 +29,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [username, setUsername] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem("avatarUrl");
+  });
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -36,6 +41,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUsername(firebaseUser.displayName);
       } else {
         setUsername(null);
+        setAvatarUrl(null);
+        localStorage.removeItem("avatarUrl");
       }
       setLoading(false);
     });
@@ -45,6 +52,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     await firebaseSignOut(auth);
     setUsername(null);
+    setAvatarUrl(null);
+    localStorage.removeItem("avatarUrl");
   };
 
   const getToken = async (): Promise<string | null> => {
@@ -53,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, username, logout, getToken }}>
+    <AuthContext.Provider value={{ user, loading, username, avatarUrl, logout, getToken }}>
       {children}
     </AuthContext.Provider>
   );

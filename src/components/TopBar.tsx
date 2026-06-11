@@ -200,14 +200,6 @@ export default function TopBar() {
   );
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 640);
     check();
     window.addEventListener("resize", check);
@@ -393,7 +385,6 @@ export default function TopBar() {
                 className="p-2 rounded-full hover:bg-[#1a1a1a] transition"
                 aria-label="Sign out"
               >
-                {/* <LogOut size={22} strokeWidth={1.8} className="text-white" /> */}
               </button>
             ) : (
               <Link

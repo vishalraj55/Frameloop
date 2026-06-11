@@ -40,9 +40,9 @@ export default function ProfilePage() {
   const [followLoading, setFollowLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"posts" | "saved">("posts");
   const isOwnProfile = useMemo(
-  () => !!user && user.uid === profile?.id,
-  [user, profile?.id]
-);
+    () => !!user && user.uid === profile?.id,
+    [user, profile?.id],
+  );
 
   useEffect(() => {
     if (!username) return;
@@ -65,6 +65,9 @@ export default function ProfilePage() {
         const data = (await res.json()) as UserProfile;
         setProfile(data);
         setIsFollowing(data.isFollowing ?? false);
+        if (data.avatarUrl) {
+          localStorage.setItem("avatarUrl", data.avatarUrl);
+        }
       } catch (err) {
         console.error(err);
       } finally {

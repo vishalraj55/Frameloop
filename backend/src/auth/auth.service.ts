@@ -1,6 +1,5 @@
 import { Injectable, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -16,11 +15,8 @@ export class AuthService {
         },
       });
       return user;
-    } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      ) {
+    } catch (error: any) {
+      if (error?.code === 'P2002') {
         throw new ConflictException('Username or email already taken');
       }
       throw error;
