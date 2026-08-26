@@ -1,6 +1,6 @@
 {
-  "name": "Frameloop",
-  "short_name": "Frameloop",
+  "name": "Frameloops",
+  "short_name": "Frameloops",
   "description": "Share your moments",
   "start_url": "/feed",
   "display": "standalone",

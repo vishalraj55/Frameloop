@@ -94,7 +94,7 @@ function PostPage({ params }: { params: Promise<{ id: string }> }) {
   }
 
   return (
-    <main className="min-h-screen bg-black">
+    <main className="mx-auto max-w-160 min-h-screen bg-black">
       <div
         className="sticky top-0 z-10 flex items-center px-4 py-3 border-b border-neutral-800"
         style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(12px)" }}

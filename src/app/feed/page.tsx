@@ -23,24 +23,24 @@ const PAGE_SIZE = 10;
 
 function PostSkeleton() {
   return (
-    <div className="border-b border-[#1a1a1a] pb-4 mb-1 animate-pulse">
+    <div className="border-b border-[#1a1a1a] pb-4 mb-1 overflow-hidden">
       <div className="flex items-center gap-3 px-4 py-3">
-        <div className="w-9 h-9 rounded-full bg-[#1e1e1e] shrink-0" />
+        <div className="w-9 h-9 rounded-full bg-[#1e1e1e] shrink-0 shimmer" />
         <div className="flex flex-col gap-1.5 flex-1">
-          <div className="h-2.5 w-24 rounded-full bg-[#1e1e1e]" />
-          <div className="h-2 w-16 rounded-full bg-[#181818]" />
+          <div className="h-2.5 w-24 rounded-full bg-[#1e1e1e] shimmer" />
+          <div className="h-2 w-16 rounded-full bg-[#181818] shimmer" />
         </div>
       </div>
-      <div className="w-full aspect-square bg-[#141414]" />
+      <div className="w-full aspect-square bg-[#141414] shimmer" />
       <div className="px-4 pt-3 flex items-center gap-4">
-        <div className="h-5 w-5 rounded-full bg-[#1e1e1e]" />
-        <div className="h-5 w-5 rounded-full bg-[#1e1e1e]" />
-        <div className="h-5 w-5 rounded-full bg-[#1e1e1e]" />
+        <div className="h-5 w-5 rounded-full bg-[#1e1e1e] shimmer" />
+        <div className="h-5 w-5 rounded-full bg-[#1e1e1e] shimmer" />
+        <div className="h-5 w-5 rounded-full bg-[#1e1e1e] shimmer" />
       </div>
       <div className="px-4 pt-3 flex flex-col gap-2">
-        <div className="h-2.5 w-20 rounded-full bg-[#1e1e1e]" />
-        <div className="h-2.5 w-4/5 rounded-full bg-[#181818]" />
-        <div className="h-2.5 w-1/2 rounded-full bg-[#161616]" />
+        <div className="h-2.5 w-20 rounded-full bg-[#1e1e1e] shimmer" />
+        <div className="h-2.5 w-4/5 rounded-full bg-[#181818] shimmer" />
+        <div className="h-2.5 w-1/2 rounded-full bg-[#161616] shimmer" />
       </div>
     </div>
   );
@@ -49,13 +49,21 @@ function PostSkeleton() {
 function FeedSkeleton() {
   return (
     <>
+      <style>{`
+  .shimmer { position: relative; overflow: hidden; }
+  .shimmer::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.06) 50%, transparent 100%);
+    background-size: 200% 100%;
+    animation: shimmerBg 1.6s ease-in-out infinite;
+  }
+  @keyframes shimmerBg { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+`}</style>
       <div className="flex gap-4 px-4 py-4 border-b border-[#1a1a1a] overflow-hidden">
         {Array.from({ length: 7 }).map((_, i) => (
-          <div key={i} className="flex flex-col items-center gap-2 animate-pulse shrink-0">
-            <div className="w-15.5 h-15.5 rounded-full bg-[#000000]"
-              style={{ opacity: 1 - i * 0.1 }}
-            />
-            <div className="h-2 w-10 rounded-full bg-neutral-800" />
+          <div key={i} className="flex flex-col items-center gap-2 shrink-0">
+            <div className="w-15.5 h-15.5 rounded-full bg-[#141414] shimmer" />
+            <div className="h-2 w-10 rounded-full bg-neutral-800 shimmer" />
           </div>
         ))}
       </div>
@@ -133,7 +141,9 @@ function EmptyFeed() {
           />
         </svg>
       </div>
-      <p className="text-[#f0f0f0] font-semibold text-[15px] mb-1">No posts yet</p>
+      <p className="text-[#f0f0f0] font-semibold text-[15px] mb-1">
+        No posts yet
+      </p>
       <p className="text-[#555] text-[13px] leading-relaxed max-w-55">
         Follow people to see their photos here.
       </p>
@@ -157,39 +167,39 @@ export default function FeedPage() {
   const touchStartY = useRef(0);
   const pulling = useRef(false);
 
-const fetchPosts = useCallback(
-  async (cursorParam?: string, replace = false) => {
-    try {
-      const params = new URLSearchParams();
-      params.set("limit", String(PAGE_SIZE));
-      if (cursorParam) params.set("cursor", cursorParam);
+  const fetchPosts = useCallback(
+    async (cursorParam?: string, replace = false) => {
+      try {
+        const params = new URLSearchParams();
+        params.set("limit", String(PAGE_SIZE));
+        if (cursorParam) params.set("cursor", cursorParam);
 
-      const token = await user?.getIdToken();
-      const res = await fetch(`/api/posts?${params.toString()}`, {
-        headers: { ...(token && { Authorization: `Bearer ${token}` }) },
-      });
+        const token = await user?.getIdToken();
+        const res = await fetch(`/api/posts?${params.toString()}`, {
+          headers: { ...(token && { Authorization: `Bearer ${token}` }) },
+        });
 
-      const text = await res.text();
-      const data = JSON.parse(text) as PostType[];
-      if (!Array.isArray(data)) return;
+        const text = await res.text();
+        const data = JSON.parse(text) as PostType[];
+        if (!Array.isArray(data)) return;
 
-      setPosts((prev) => {
-        if (replace) return data;
-        const seen = new Set(prev.map((p) => p.id));
-        return [...prev, ...data.filter((p) => !seen.has(p.id))];
-      });
+        setPosts((prev) => {
+          if (replace) return data;
+          const seen = new Set(prev.map((p) => p.id));
+          return [...prev, ...data.filter((p) => !seen.has(p.id))];
+        });
 
-      setHasMore(data.length === PAGE_SIZE);
+        setHasMore(data.length === PAGE_SIZE);
 
         if (data.length > 0) {
           setCursor(data[data.length - 1]!.id);
         }
-    } catch (err) {
-      console.error("Failed to fetch posts:", err);
-    }
-  },
-  [user],
-);
+      } catch (err) {
+        console.error("Failed to fetch posts:", err);
+      }
+    },
+    [user],
+  );
 
   useEffect(() => {
     if (authLoading) return;
@@ -265,51 +275,53 @@ const fetchPosts = useCallback(
         </div>
       )}
 
-      {initialLoading ? (
-        <FeedSkeleton />
-      ) : (
-        <main>
-          <StoriesBar />
+      <div className="mx-auto w-full max-w-160">
+        {initialLoading ? (
+          <FeedSkeleton />
+        ) : (
+          <main>
+            <StoriesBar />
 
-          {posts.length === 0 ? (
-            <EmptyFeed />
-          ) : (
-            <>
-              {posts.map((post, index) => (
-                <Post
-                  key={post.id}
-                  id={post.id}
-                  authorId={post.author.id}
-                  username={post.author.username}
-                  avatar={post.author.avatarUrl ?? null}
-                  imageUrl={post.imageUrl}
-                  caption={post.caption ?? ""}
-                  likes={post.likes.length}
-                  isLiked={post.likes.some((l) => l.userId === user?.uid)}
-                  createdAt={post.createdAt ?? ""}
-                  isFollowing={post.author.isFollowing ?? false}
-                  priority={index === 0}
-                />
-              ))}
+            {posts.length === 0 ? (
+              <EmptyFeed />
+            ) : (
+              <>
+                {posts.map((post, index) => (
+                  <Post
+                    key={post.id}
+                    id={post.id}
+                    authorId={post.author.id}
+                    username={post.author.username}
+                    avatar={post.author.avatarUrl ?? null}
+                    imageUrl={post.imageUrl}
+                    caption={post.caption ?? ""}
+                    likes={post.likes.length}
+                    isLiked={post.likes.some((l) => l.userId === user?.uid)}
+                    createdAt={post.createdAt ?? ""}
+                    isFollowing={post.author.isFollowing ?? false}
+                    priority={index === 0}
+                  />
+                ))}
 
-              <div ref={sentinelRef} className="py-8 flex justify-center">
-                {loadingMore && (
-                  <div className="w-5 h-5 border-[1.5px] border-[#333] border-t-[#f0f0f0] rounded-full animate-spin" />
-                )}
-                {!hasMore && posts.length > 0 && (
-                  <div className="flex items-center gap-3">
-                    <div className="h-px w-12 bg-black" />
-                    <p className="text-[#444] text-[11px] tracking-widest uppercase">
-                      all caught up
-                    </p>
-                    <div className="h-px w-12 bg-black" />
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </main>
-      )}
+                <div ref={sentinelRef} className="py-8 flex justify-center">
+                  {loadingMore && (
+                    <div className="w-5 h-5 border-[1.5px] border-[#333] border-t-[#f0f0f0] rounded-full animate-spin" />
+                  )}
+                  {!hasMore && posts.length > 0 && (
+                    <div className="flex items-center gap-3">
+                      <div className="h-px w-12 bg-black" />
+                      <p className="text-[#444] text-[11px] tracking-widest uppercase">
+                        all caught up
+                      </p>
+                      <div className="h-px w-12 bg-black" />
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </main>
+        )}
+      </div>
     </div>
   );
 }

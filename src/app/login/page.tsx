@@ -39,7 +39,7 @@ export default function LoginPage() {
     <main className="min-h-screen bg-black flex items-center justify-center px-4">
       <div className="w-full max-w-sm border border-gray-800 bg-black p-10">
         <h1 className="text-white text-center text-3xl font-bold mb-8 tracking-wider">
-          Frameloop
+          Frameloops
         </h1>
         <input type="email" placeholder="Email" value={email}
           onChange={(e) => setEmail(e.target.value)}

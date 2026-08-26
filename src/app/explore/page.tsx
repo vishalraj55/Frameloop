@@ -20,6 +20,7 @@ import {
   Pencil,
   Flag,
   Check,
+  Play,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -51,6 +52,7 @@ interface PostType {
   author?: Author;
   createdAt?: string;
   savedByMe?: boolean;
+  commentsCount?: number;
 }
 
 function getRelativeTime(dateStr: string): string {
@@ -78,7 +80,11 @@ function Avatar({
   return (
     <div
       className="relative rounded-full overflow-hidden shrink-0"
-      style={{ width: size, height: size, background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",}}
+      style={{
+        width: size,
+        height: size,
+        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+      }}
     >
       {src ? (
         <Image src={src} alt="" fill className="object-cover" />
@@ -93,17 +99,15 @@ function Avatar({
 
 function GridSkeleton() {
   return (
-    <div className="grid grid-cols-3 gap-0.5 sm:gap-0.75">
+    <div className="grid grid-cols-3 gap-0.75 md:gap-2">
       {Array.from({ length: 12 }).map((_, i) => (
         <div
           key={i}
-          className={`relative bg-[#111] ${
-            i % 7 === 0 
-            ? "col-span-2 row-span-2" : ""
-          } aspect-square`}
-          style={{
-            animation: `shimmer 1.5s ease-in-out ${i * 0.1}s infinite`,
-          }}
+          className={`relative bg-[#111] overflow-hidden aspect-square rounded-none md:rounded-md ${
+            i % 7 === 0
+              ? "col-span-2 row-span-2 md:col-span-1 md:row-span-1"
+              : ""
+          }`}
         >
           <div
             className="absolute inset-0"
@@ -111,15 +115,15 @@ function GridSkeleton() {
               background:
                 "linear-gradient(90deg, #111 0%, #1a1a1a 50%, #111 100%)",
               backgroundSize: "200% 100%",
-              animation: "shimmerBg 1.5s ease-in-out infinite",
+              animation: `shimmerBg 2.6s ease-in-out ${i * 0.08}s infinite`,
             }}
           />
         </div>
       ))}
       <style>{`
         @keyframes shimmerBg {
-          0% { background-position: -200% 0; }
-          100% { background-position: 200% 0; }
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
         }
       `}</style>
     </div>
@@ -139,6 +143,7 @@ function PostTile({
 }) {
   const [hovered, setHovered] = useState(false);
   const isLarge = index % 7 === 0;
+  const isVideo = Boolean((post as PostType & { videoUrl?: string }).videoUrl);
 
   const handleClick = () => {
     if (window.innerWidth < 768) {
@@ -151,8 +156,8 @@ function PostTile({
   return (
     <button
       onClick={handleClick}
-      className={`relative block overflow-hidden group ${
-        isLarge ? "col-span-2 row-span-2" : ""
+      className={`relative block overflow-hidden group rounded-none md:rounded-md ${
+        isLarge ? "col-span-2 row-span-2 md:col-span-1 md:row-span-1" : ""
       } aspect-square`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -165,13 +170,20 @@ function PostTile({
         src={post.imageUrl}
         alt=""
         fill
-        className="object-cover"
+        className="object-cover rounded-none md:rounded-md"
         style={{
           transform: hovered ? "scale(1.08)" : "scale(1)",
           transition: "transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
         }}
         sizes="(max-width: 768px) 33vw, 300px"
       />
+
+      {isVideo && (
+        <div className="absolute top-2.5 right-2.5 text-white drop-shadow-lg">
+          <Play size={16} className="fill-white" />
+        </div>
+      )}
+
       <div
         className="absolute inset-0 flex flex-col items-center justify-center gap-3"
         style={{
@@ -184,6 +196,10 @@ function PostTile({
           <div className="flex items-center gap-1.5 text-white font-bold text-sm drop-shadow-lg">
             <Heart className="w-5 h-5 fill-white" />
             {post.likes.length}
+          </div>
+          <div className="flex items-center gap-1.5 text-white font-bold text-sm drop-shadow-lg">
+            <MessageCircle className="w-5 h-5 fill-white" />
+            {post.commentsCount ?? 0}
           </div>
         </div>
       </div>
@@ -256,8 +272,9 @@ function CommentSection({
     try {
       const res = await fetch(`/api/posts/${postId}/comments`, {
         method: "POST",
-        headers: { "Content-Type": "application/json",
-          Authorization: `Bearer ${await user?.getIdToken() ?? ""}`,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${(await user?.getIdToken()) ?? ""}`,
         },
         body: JSON.stringify({
           authorId: userId,
@@ -419,7 +436,8 @@ function CommentSection({
           <MoreHorizontal size={14} />
         </button>
         {menuOpenId === comment.id && (
-          <div className="absolute right-0 top-6 z-20 rounded-2xl shadow-2xl overflow-hidden min-w-35"
+          <div
+            className="absolute right-0 top-6 z-20 rounded-2xl shadow-2xl overflow-hidden min-w-35"
             style={{
               background: "rgba(30,30,30,0.95)",
               backdropFilter: "blur(20px)",
@@ -477,7 +495,8 @@ function CommentSection({
     parentId?: string;
     isReply?: boolean;
   }) => (
-    <div className={`group flex items-start gap-2.5 ${isReply ? "pl-10" : ""}`}
+    <div
+      className={`group flex items-start gap-2.5 ${isReply ? "pl-10" : ""}`}
       style={{ animation: "fadeSlideIn 0.2s ease" }}
     >
       <Avatar
@@ -621,7 +640,8 @@ function CommentSection({
                   onClick={() => toggleReplies(comment.id)}
                   className="ml-10 flex items-center gap-2 text-neutral-500 hover:text-neutral-300 text-xs font-semibold transition-colors w-fit"
                 >
-                  <span className="w-5 h-px inline-block"
+                  <span
+                    className="w-5 h-px inline-block"
                     style={{ background: "rgba(255,255,255,0.15)" }}
                   />
                   {expandedReplies.has(comment.id) ? (
@@ -651,7 +671,8 @@ function CommentSection({
       </div>
 
       {/* Input */}
-      <div className="shrink-0"
+      <div
+        className="shrink-0"
         style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
       >
         {replyingTo && (
@@ -663,7 +684,10 @@ function CommentSection({
               </span>
             </span>
             <button onClick={() => setReplyingTo(null)}>
-              <X size={13} className="text-neutral-500 hover:text-white transition-colors" />
+              <X
+                size={13}
+                className="text-neutral-500 hover:text-white transition-colors"
+              />
             </button>
           </div>
         )}
@@ -680,9 +704,7 @@ function CommentSection({
               if (e.key === "Enter") void handlePost();
             }}
             placeholder={
-              replyingTo
-                ? `Reply to @${replyingTo.username}...`
-                : "comment..."
+              replyingTo ? `Reply to @${replyingTo.username}...` : "comment..."
             }
             className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-neutral-600"
           />
@@ -846,17 +868,23 @@ function LightboxModal({
       >
         {/* Image */}
         <div className="relative flex-1 min-w-0 bg-black">
-          <Image src={post.imageUrl} alt="" fill className="object-contain"
+          <Image
+            src={post.imageUrl}
+            alt=""
+            fill
+            className="object-contain"
             style={{ transition: "opacity 0.3s ease" }}
           />
         </div>
 
         {/* Comments panel */}
-        <div className="w-85 shrink-0 flex flex-col"
+        <div
+          className="w-85 shrink-0 flex flex-col"
           style={{ borderLeft: "1px solid rgba(255,255,255,0.06)" }}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3.5 shrink-0"
+          <div
+            className="flex items-center justify-between px-4 py-3.5 shrink-0"
             style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
           >
             <Link
@@ -898,7 +926,8 @@ function LightboxModal({
           {/*Caption+comments*/}
           <div className="flex-1 overflow-y-auto min-h-0">
             {post.caption && post.author && (
-              <div className="flex items-start gap-3 px-4 py-3"
+              <div
+                className="flex items-start gap-3 px-4 py-3"
                 style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}
               >
                 <Avatar
@@ -925,7 +954,8 @@ function LightboxModal({
           </div>
 
           {/*Actions*/}
-          <div className="px-4 py-3 shrink-0"
+          <div
+            className="px-4 py-3 shrink-0"
             style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
           >
             <div className="flex items-center justify-between mb-2.5">
@@ -1093,7 +1123,8 @@ export default function ExplorePage() {
           <GridSkeleton />
         ) : posts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-32 gap-3 text-center">
-            <div className="w-16 h-16 rounded-full flex items-center justify-center mb-2"
+            <div
+              className="w-16 h-16 rounded-full flex items-center justify-center mb-2"
               style={{ border: "1px solid rgba(255,255,255,0.1)" }}
             >
               <svg
@@ -1103,20 +1134,31 @@ export default function ExplorePage() {
                 strokeWidth={1.5}
                 viewBox="0 0 24 24"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803 7.5 7.5 0 0016.803 15.803z" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803 7.5 7.5 0 0016.803 15.803z"
+                />
               </svg>
             </div>
-            <p className="text-white text-sm font-semibold">Nothing to explore yet</p>
+            <p className="text-white text-sm font-semibold">
+              Nothing to explore yet
+            </p>
             <p className="text-neutral-600 text-xs">
               Posts will appear here once shared
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-3" style={{ gap: "3px" }}>
+          <div className="grid grid-cols-3 gap-0.75 md:gap-2">
             {posts.map((post, index) => (
-              <PostTile key={post.id} post={post} index={index}
+              <PostTile
+                key={post.id}
+                post={post}
+                index={index}
                 onClick={() => setSelectedIndex(index)}
-                onMobileClick={() => router.push(`/post/${post.id}?source=explore`)}
+                onMobileClick={() =>
+                  router.push(`/post/${post.id}?source=explore`)
+                }
               />
             ))}
           </div>

@@ -5,7 +5,7 @@ import type { Metadata, Viewport } from "next";
 import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata: Metadata = {
-  title: "Frameloop",
+  title: "Frameloops",
   description: "A minimal photo sharing app",
   icons: { 
     icon: "/Logo.png",
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Frameloop",
+    title: "Frameloops",
   },
 };
 
@@ -47,7 +47,7 @@ export default function RootLayout({
           <div>
             <NavBar />
           </div>
-          <main className="mx-auto max-w-160 px-2 pt-1 md:pt-2 pb-16 md:pb-6">
+          <main className="mx-auto px-2 pt-1 md:pt-2 pb-16 md:pb-6">
             {children}
           </main>
         </AuthProvider>

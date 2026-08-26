@@ -53,9 +53,13 @@ export default function NavBar() {
       if (!parent) return;
       const parentRect = parent.getBoundingClientRect();
       const elRect = el.getBoundingClientRect();
+      const desiredLeft = elRect.left - parentRect.left - 16;
+      const desiredRight = elRect.right - parentRect.left + 14;
+      const left = Math.max(0, desiredLeft);
+      const right = Math.min(parentRect.width, desiredRight);
       setPillStyle({
-        left: elRect.left - parentRect.left - 16,
-        width: elRect.width + 32,
+        left,
+        width: Math.max(0, right - left),
         opacity: 1,
       });
     }, 0);
@@ -71,7 +75,7 @@ export default function NavBar() {
       {/* Mobile bottom nav */}
       <nav className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 md:hidden">
         <div
-          className="relative flex items-center justify-around gap-2 px-6 h-16 rounded-full backdrop-blur-xl shadow-2xl min-w-[320px]"
+          className="relative flex items-center justify-around gap-2  h-18 rounded-full backdrop-blur-xl shadow-2xl min-w-[320px]"
           style={{
             background: "rgba(255, 255, 255, 0.08)",
             border: "1px solid rgba(255, 255, 255, 0.15)",
@@ -81,16 +85,23 @@ export default function NavBar() {
         >
           {/* Sliding pill */}
           <span
-            className="absolute top-1/2 -translate-y-1/2 h-12 rounded-full pointer-events-none backdrop-blur-md"
+            className="absolute pointer-events-none rounded-full"
             style={{
               left: pillStyle.left,
               width: pillStyle.width,
+              height: "48px",
+              top: "50%",
               opacity: pillStyle.opacity,
               background: "rgba(255, 255, 255, 0.08)",
-              border: "1px solid rgba(255, 255, 255, 0.15)",
+              border: "1px solid rgba(255, 255, 255, 0.12)",
               boxShadow: "inset 0 1px 0 rgba(255,255,255,0.1)",
+              borderRadius: "9999px",
+              transform: "translate3d(0, -50%, 0)",
               transition:
-                "left 350ms cubic-bezier(0.16,1,0.3,1), width 350ms cubic-bezier(0.16,1,0.3,1), opacity 200ms ease",
+                "left 350ms cubic-bezier(0.16,1,0.3,1), " +
+                "width 350ms cubic-bezier(0.16,1,0.3,1), " +
+                "opacity 200ms ease",
+              willChange: "left, width",
             }}
           />
 
@@ -165,7 +176,11 @@ export default function NavBar() {
             <NavItem href="/search" label="Search" active={active("/search")}>
               <Search size={26} strokeWidth={1.7} />
             </NavItem>
-            <NavItem href="/explore" label="Explore" active={active("/explore")}>
+            <NavItem
+              href="/explore"
+              label="Explore"
+              active={active("/explore")}
+            >
               <Compass size={26} strokeWidth={1.7} />
             </NavItem>
             <NavItem href="/upload" label="Create" active={active("/upload")}>
@@ -174,7 +189,11 @@ export default function NavBar() {
             {loading ? (
               <div className="w-6 h-6 ml-3" />
             ) : username ? (
-              <NavItem href={`/profile/${username}`} label="Profile" active={active(`/profile/${username}`)}>
+              <NavItem
+                href={`/profile/${username}`}
+                label="Profile"
+                active={active(`/profile/${username}`)}
+              >
                 <UserIcon size={26} strokeWidth={1.7} />
               </NavItem>
             ) : (
@@ -223,7 +242,10 @@ export default function NavBar() {
 }
 
 function NavItem({
-  href, label, active, children,
+  href,
+  label,
+  active,
+  children,
 }: {
   href: string;
   label: string;

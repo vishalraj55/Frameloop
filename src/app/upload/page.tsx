@@ -243,8 +243,8 @@ export default function UploadPage() {
 
   if (step === "select") {
     return (
-      <main className="bg-black min-h-screen text-white">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-900">
+      <main className="mx-auto max-w-160 w-full bg-black min-h-screen text-white">
+        <div className=" flex items-center justify-between px-4 py-3 border-b border-neutral-900">
           <span className="text-[15px] font-semibold">New Post</span>
         </div>
         <div className="px-4 py-8">
@@ -272,7 +272,7 @@ export default function UploadPage() {
 
   if (step === "edit") {
     return (
-      <main className="bg-black min-h-screen text-white">
+      <main className=" mx-auto max-w-160 bg-black min-h-screen text-white">
         <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-900">
           <button onClick={handleBack}>
             <ChevronLeft size={24} />
