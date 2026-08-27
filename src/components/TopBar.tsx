@@ -5,7 +5,7 @@ import Link from "next/link";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import {
-  Settings,
+  Bolt,
   Bell,
   Heart,
   MessageCircle,
@@ -199,6 +199,11 @@ export default function TopBar() {
     [notifications],
   );
 
+    const isHome = useMemo(
+    () => pathname === "/" || pathname === "/feed",
+    [pathname],
+  );
+
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 640);
     check();
@@ -286,7 +291,7 @@ export default function TopBar() {
   return (
     <>
       <header className="fixed inset-x-0 top-0 z-50 bg-black border-b border-[#191919] h-14">
-        <div className="max-w-lg mx-auto h-full flex items-center justify-between px-4">
+        <div className="max-w-3xl mx-auto h-full flex items-center justify-between px-4">
           <h1
             className="text-white text-lg tracking-wide select-none truncate max-w-[60%]"
             style={{ fontFamily: font }}
@@ -295,7 +300,7 @@ export default function TopBar() {
           </h1>
 
           <div className="flex items-center gap-1">
-            {user && (
+            {user && isHome && (
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => void handleBell()}
@@ -375,7 +380,7 @@ export default function TopBar() {
                 className="p-2 rounded-full hover:bg-[#1a1a1a] transition"
                 aria-label="Settings"
               >
-                <Settings size={22} strokeWidth={1.8} className="text-white" />
+                <Bolt size={22} strokeWidth={1.8} className="text-white" />
               </button>
             )}
 

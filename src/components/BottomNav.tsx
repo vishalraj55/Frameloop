@@ -10,7 +10,7 @@ import {
   Search,
   Compass,
   User as UserIcon,
-  PlusSquare,
+  Upload,
   Settings,
   LogOut,
 } from "lucide-react";
@@ -53,8 +53,8 @@ export default function NavBar() {
       if (!parent) return;
       const parentRect = parent.getBoundingClientRect();
       const elRect = el.getBoundingClientRect();
-      const desiredLeft = elRect.left - parentRect.left - 16;
-      const desiredRight = elRect.right - parentRect.left + 14;
+      const desiredLeft = elRect.left - parentRect.left - 22;
+      const desiredRight = elRect.right - parentRect.left + 24;
       const left = Math.max(0, desiredLeft);
       const right = Math.min(parentRect.width, desiredRight);
       setPillStyle({
@@ -75,7 +75,7 @@ export default function NavBar() {
       {/* Mobile bottom nav */}
       <nav className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 md:hidden">
         <div
-          className="relative flex items-center justify-around gap-2  h-18 rounded-full backdrop-blur-xl shadow-2xl min-w-[320px]"
+          className="relative flex items-center justify-around gap-2 px-3 h-18 rounded-full backdrop-blur-xl shadow-2xl min-w-[320px]"
           style={{
             background: "rgba(255, 255, 255, 0.08)",
             border: "1px solid rgba(255, 255, 255, 0.15)",
@@ -88,8 +88,8 @@ export default function NavBar() {
             className="absolute pointer-events-none rounded-full"
             style={{
               left: pillStyle.left,
-              width: pillStyle.width,
-              height: "48px",
+              width: "66px",
+              height: "44px",
               top: "50%",
               opacity: pillStyle.opacity,
               background: "rgba(255, 255, 255, 0.08)",
@@ -124,7 +124,7 @@ export default function NavBar() {
             href="/upload"
             className={`relative z-10 ${active("/upload")}`}
           >
-            <PlusSquare size={24} strokeWidth={1.6} />
+            <Upload size={24} strokeWidth={1.6} />
           </Link>
           <Link
             ref={setRef(3)}
@@ -184,7 +184,7 @@ export default function NavBar() {
               <Compass size={26} strokeWidth={1.7} />
             </NavItem>
             <NavItem href="/upload" label="Create" active={active("/upload")}>
-              <PlusSquare size={26} strokeWidth={1.7} />
+              <Upload size={26} strokeWidth={1.7} />
             </NavItem>
             {loading ? (
               <div className="w-6 h-6 ml-3" />

@@ -246,7 +246,7 @@ function Card({ c, children }: { c: ThemeColors; children: React.ReactNode }) {
   return (
     <div
       style={{ background: c.card, border: `1px solid ${c.border}` }}
-      className="mx-4 rounded-2xl overflow-hidden"
+      className="mx-4 rounded-2xl px-4 py-4 overflow-hidden"
     >
       {children}
     </div>
