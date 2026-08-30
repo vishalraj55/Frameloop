@@ -10,18 +10,82 @@ import { Plus } from "lucide-react";
 interface StoryType {
   id: string;
   imageUrl: string;
+  createdAt: string;
   author: {
+    id: string;
     username: string;
     avatarUrl?: string;
   };
 }
+
+interface StoryGroup {
+  authorId: string;
+  username: string;
+  avatarUrl?: string;
+  stories: StoryType[];
+}
+
+const SEEN_KEY = "seenStoryIds";
+const emptyArray: string[] = [];
 
 function subscribeToStorage(cb: () => void) {
   window.addEventListener("storage", cb);
   return () => window.removeEventListener("storage", cb);
 }
 
-const emptyArray: string[] = [];
+function readSeenIds(): string[] {
+  try {
+    const raw = localStorage.getItem(SEEN_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed)
+      ? parsed.filter((v) => typeof v === "string")
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function markStoryIdsSeen(ids: string[]) {
+  try {
+    const current = new Set(readSeenIds());
+    ids.forEach((id) => current.add(id));
+    localStorage.setItem(SEEN_KEY, JSON.stringify([...current]));
+    window.dispatchEvent(new Event("storage"));
+  } catch {}
+}
+function groupStoriesByAuthor(stories: StoryType[]): StoryGroup[] {
+  const map = new Map<string, StoryGroup>();
+
+  for (const story of stories) {
+    if (!story?.id || !story.author?.id) continue;
+
+    const key = story.author.id;
+    const existing = map.get(key);
+
+    if (existing) {
+      if (!existing.stories.some((s) => s.id === story.id)) {
+        existing.stories.push(story);
+      }
+    } else {
+      map.set(key, {
+        authorId: story.author.id,
+        username: story.author.username || "user",
+        avatarUrl: story.author.avatarUrl,
+        stories: [story],
+      });
+    }
+  }
+
+  for (const group of map.values()) {
+    group.stories.sort(
+      (a, b) =>
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    );
+  }
+
+  return Array.from(map.values());
+}
 
 async function compressImage(file: File): Promise<Blob> {
   return new Promise((resolve, reject) => {
@@ -89,12 +153,10 @@ async function compressVideo(file: File): Promise<Blob> {
       const source = audioCtx.createMediaElementSource(video);
       const audioDestination = audioCtx.createMediaStreamDestination();
       source.connect(audioDestination);
-      // source.connect(audioCtx.destination);
 
       const videoStream = canvas.captureStream(30);
       const audioStream = audioDestination.stream;
 
-      // Combine video + audio tracks
       const combinedStream = new MediaStream([
         ...videoStream.getVideoTracks(),
         ...audioStream.getAudioTracks(),
@@ -153,26 +215,29 @@ async function compressVideo(file: File): Promise<Blob> {
 
 export default function StoriesBar() {
   const [user, setUser] = useState<User | null>(null);
+  const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
+      setAuthReady(true);
     });
     return () => unsubscribe();
   }, []);
 
   const [stories, setStories] = useState<StoryType[]>([]);
+  const [fetchError, setFetchError] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadLabel, setUploadLabel] = useState("Your story");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cacheRef = useRef<{ raw: string; parsed: string[] } | null>(null);
 
-  const seenStories = useSyncExternalStore(
+  const seenIds = useSyncExternalStore(
     subscribeToStorage,
     () => {
-      const raw = localStorage.getItem("seenStories") ?? "[]";
+      const raw = localStorage.getItem(SEEN_KEY) ?? "[]";
       if (cacheRef.current?.raw === raw) return cacheRef.current.parsed;
-      const parsed = JSON.parse(raw) as string[];
+      const parsed = readSeenIds();
       cacheRef.current = { raw, parsed };
       return parsed;
     },
@@ -182,7 +247,6 @@ export default function StoriesBar() {
   const fetchStories = async () => {
     try {
       const headers: HeadersInit = {};
-
       if (user) {
         const token = await user.getIdToken();
         headers["Authorization"] = `Bearer ${token}`;
@@ -191,41 +255,61 @@ export default function StoriesBar() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/stories`, {
         headers,
       });
-      const data = (await res.json()) as StoryType[];
-      setStories(data);
+      if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
+
+      const data = (await res.json()) as unknown;
+      setStories(Array.isArray(data) ? (data as StoryType[]) : []);
+      setFetchError(false);
     } catch (err) {
       console.error("Failed to fetch stories:", err);
+      setFetchError(true);
+      // keep previous `stories` on screen rather than wiping the bar
     }
   };
 
   useEffect(() => {
-    const fetchStories = async () => {
-      try {
-        const headers: HeadersInit = {};
-
-        if (user) {
-          const token = await user.getIdToken();
-          headers["Authorization"] = `Bearer ${token}`;
-        }
-
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/stories`, {
-          headers,
-        });
-        const data = (await res.json()) as StoryType[];
-        setStories(data);
-      } catch (err) {
-        console.error("Failed to fetch stories:", err);
-      }
-    };
+    if (!authReady) return;
     void fetchStories();
-  }, [user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authReady, user]);
+
+  const groups = groupStoriesByAuthor(stories);
+  const ownGroup = user
+    ? groups.find((g) => g.authorId === user.uid)
+    : undefined;
+  const otherGroups = groups.filter((g) => g.authorId !== user?.uid);
+
+  const isGroupUnseen = (group: StoryGroup) =>
+    group.stories.some((s) => !seenIds.includes(s.id));
+  const sortedOtherGroups = [...otherGroups].sort((a, b) => {
+    const aUnseen = isGroupUnseen(a);
+    const bUnseen = isGroupUnseen(b);
+    if (aUnseen !== bUnseen) return aUnseen ? -1 : 1;
+
+    const aLatest = new Date(
+      a.stories[a.stories.length - 1].createdAt,
+    ).getTime();
+    const bLatest = new Date(
+      b.stories[b.stories.length - 1].createdAt,
+    ).getTime();
+    return bLatest - aLatest;
+  });
+
+  const hasUnseenOwnStory = !!ownGroup && isGroupUnseen(ownGroup);
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const authorId = user?.uid;
-    if (!authorId) {
+    if (!user) {
       alert("You must be logged in to post a story.");
+      e.target.value = "";
+      return;
+    }
+
+    if (file.size === 0) {
+      alert("That file appears to be empty.");
+      e.target.value = "";
       return;
     }
 
@@ -234,6 +318,7 @@ export default function StoriesBar() {
 
     if (!isImage && !isVideo) {
       alert("Only images and videos are supported.");
+      e.target.value = "";
       return;
     }
 
@@ -256,7 +341,7 @@ export default function StoriesBar() {
         type: isImage ? "image/jpeg" : "video/webm",
       });
 
-      const token = await user!.getIdToken();
+      const token = await user.getIdToken();
       const form = new FormData();
       form.append("image", compressedFile);
 
@@ -266,7 +351,7 @@ export default function StoriesBar() {
         body: form,
       });
 
-      if (!res.ok) throw new Error("Upload failed");
+      if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
 
       await fetchStories();
     } catch (err) {
@@ -280,9 +365,8 @@ export default function StoriesBar() {
   };
 
   return (
-    <section className="bg-black border-b border-[#262626] overflow-x-auto scrollbar-hide">
-      <div className="flex gap-3 px-3 py-3 w-max">
-
+    <section className="bg-black overflow-x-auto scrollbar-hide">
+      <div className="flex gap-6 px-6 py-6 w-max">
         <input
           ref={fileInputRef}
           type="file"
@@ -291,33 +375,96 @@ export default function StoriesBar() {
           onChange={(e) => void handleFileChange(e)}
         />
 
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
-          className="flex flex-col items-center gap-1 w-16.5 cursor-pointer disabled:opacity-60"
-        >
-          <div className="relative w-18 h-18 rounded-full border border-[#262626] bg-[#1c1c1c] flex items-center justify-center">
-            {uploading ? (
-              <div className="w-5 h-5 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
-            ) : (
-              <div className="w-6 h-6 rounded-full bg-[#0095f6] flex items-center justify-center">
-                <Plus size={14} className="text-white" strokeWidth={3} />
+        {ownGroup ? (
+          <Link
+            href={`/story/${user?.displayName ?? ""}`}
+            className="flex flex-col items-center gap-1 w-16.5"
+          >
+            <div
+              className={`relative p-0.5 rounded-full ${
+                hasUnseenOwnStory
+                  ? "bg-linear-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888]"
+                  : "bg-[#262626]"
+              }`}
+            >
+              <div className="p-0.5 rounded-full bg-black">
+                <div className="relative w-14.5 h-14.5 rounded-full bg-[#1c1c1c] flex items-center justify-center overflow-hidden">
+                  {ownGroup.avatarUrl ? (
+                    <Image
+                      src={ownGroup.avatarUrl}
+                      alt="Your story"
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-white text-xl font-medium">
+                      {ownGroup.username?.[0]?.toUpperCase() ?? "?"}
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
-          <span className="text-[11px] text-white w-full text-center truncate">
-            {uploadLabel}
-          </span>
-        </button>
 
-        {stories.map((story) => {
-          const isSeen = seenStories.includes(story.author.username);
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  fileInputRef.current?.click();
+                }}
+                disabled={uploading}
+                className="absolute bottom-0 right-0 w-5 h-5 rounded-full bg-[#0095f6] border-2 border-black flex items-center justify-center disabled:opacity-60"
+              >
+                {uploading ? (
+                  <div className="w-2.5 h-2.5 border-[1.5px] border-white/40 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Plus size={10} className="text-white" strokeWidth={3} />
+                )}
+              </button>
+            </div>
+            <span className="text-[11px] text-white w-full text-center truncate">
+              {uploading ? uploadLabel : "Your story"}
+            </span>
+          </Link>
+        ) : (
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="flex flex-col items-center gap-1 w-16.5 cursor-pointer disabled:opacity-60"
+          >
+            <div className="p-0.5 rounded-full bg-[#262626]">
+              <div className="p-0.5 rounded-full bg-black">
+                <div className="relative w-21 h-21 rounded-full bg-[#1c1c1c] flex items-center justify-center">
+                  {uploading ? (
+                    <div className="w-5 h-5 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <div className="w-6 h-6 rounded-full bg-[#0095f6] flex items-center justify-center">
+                      <Plus size={14} className="text-white" strokeWidth={3} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            <span className="text-[11px] text-white w-full text-center truncate">
+              {uploadLabel}
+            </span>
+          </button>
+        )}
+
+        {fetchError && stories.length === 0 && (
+          <div className="flex items-center text-[11px] text-[#8e8e8e] px-2">
+            Couldn&apos;t load stories
+          </div>
+        )}
+
+        {sortedOtherGroups.map((group) => {
+          const isSeen = !isGroupUnseen(group);
+          const displayName = group.username || "user";
 
           return (
             <Link
-              key={story.id}
-              href={`/story/${story.author.username}`}
-              className="flex flex-col items-center gap-1 w-16.5"
+              key={group.authorId}
+              href={`/story/${displayName}`}
+              onClick={() => markStoryIdsSeen(group.stories.map((s) => s.id))}
+              className="flex flex-col items-center gap-1 w-21"
             >
               <div
                 className={`p-0.5 rounded-full ${
@@ -327,17 +474,17 @@ export default function StoriesBar() {
                 }`}
               >
                 <div className="p-0.5 rounded-full bg-black">
-                  <div className="relative w-14.5 h-14.5 rounded-full overflow-hidden bg-[#1c1c1c]">
-                    {story.author.avatarUrl ? (
+                  <div className="relative w-21 h-21 rounded-full overflow-hidden bg-[#1c1c1c]">
+                    {group.avatarUrl ? (
                       <Image
-                        src={story.author.avatarUrl}
-                        alt={story.author.username}
+                        src={group.avatarUrl}
+                        alt={displayName}
                         fill
                         className="object-cover"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-white text-xl font-medium">
-                        {story.author.username[0].toUpperCase()}
+                        {displayName[0]?.toUpperCase() ?? "?"}
                       </div>
                     )}
                   </div>
@@ -348,12 +495,11 @@ export default function StoriesBar() {
                   isSeen ? "text-[#8e8e8e]" : "text-white"
                 }`}
               >
-                {story.author.username}
+                {displayName}
               </span>
             </Link>
           );
         })}
-
       </div>
     </section>
   );

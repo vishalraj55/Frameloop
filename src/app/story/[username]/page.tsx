@@ -52,7 +52,21 @@ export default function StoryPage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const progressRef = useRef(0);
   const viewedIds = useRef<Set<string>>(new Set());
+  const [fetchDone, setFetchDone] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
+  const SEEN_KEY = "seenStoryIds";
+
+  function markStoryIdSeen(id: string) {
+    try {
+      const raw = localStorage.getItem(SEEN_KEY);
+      const seen: string[] = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(seen) || seen.includes(id)) return;
+      localStorage.setItem(SEEN_KEY, JSON.stringify([...seen, id]));
+      window.dispatchEvent(new Event("storage"));
+    } catch {}
+  }
   useEffect(() => {
     const fetchStories = async () => {
       try {
@@ -69,47 +83,56 @@ export default function StoryPage() {
         setStories(data);
       } catch (err) {
         console.error("Failed to fetch stories:", err);
+      } finally {
+        setFetchDone(true);
       }
     };
     void fetchStories();
   }, [username, user]);
 
+  useEffect(() => {
+    if (!username) return;
+  }, [username]);
+
   // Record view when story loads
-useEffect(() => {
-  const story = stories[currentIndex];
-  if (!story || !user || !loaded) return;
-  if (story.author.id === currentUserId) return;
-  if (viewedIds.current.has(story.id)) return;
+  useEffect(() => {
+    const story = stories[currentIndex];
+    if (!story || !user || !loaded) return;
+    if (story.author.id === currentUserId) return;
+    if (viewedIds.current.has(story.id)) return;
 
-  viewedIds.current.add(story.id);
+    viewedIds.current.add(story.id);
 
-  const recordView = async () => {
-    const token = await user.getIdToken();
-    void fetch(`${process.env.NEXT_PUBLIC_API_URL}/stories/${story.id}/view`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-  };
-  void recordView();
-}, [currentIndex, stories, user, loaded, currentUserId]);
-
-const fetchViews = useCallback(
-  async (storyId: string) => {
-    if (!user) return;
-    try {
+    const recordView = async () => {
       const token = await user.getIdToken();
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/stories/${storyId}/views`,
-        { headers: { Authorization: `Bearer ${token}` } },
+      void fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/stories/${story.id}/view`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+        },
       );
-      const data = (await res.json()) as StoryView[];
-      setViews(data);
-    } catch (err) {
-      console.error("Failed to fetch views:", err);
-    }
-  },
-  [user],
-);
+    };
+    void recordView();
+  }, [currentIndex, stories, user, loaded, currentUserId]);
+
+  const fetchViews = useCallback(
+    async (storyId: string) => {
+      if (!user) return;
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/stories/${storyId}/views`,
+          { headers: { Authorization: `Bearer ${token}` } },
+        );
+        const data = (await res.json()) as StoryView[];
+        setViews(data);
+      } catch (err) {
+        console.error("Failed to fetch views:", err);
+      }
+    },
+    [user],
+  );
 
   const handleShowViews = () => {
     const story = stories[currentIndex];
@@ -124,6 +147,41 @@ const fetchViews = useCallback(
     setPaused(false);
   };
 
+  const handleDelete = async () => {
+    if (!user || !story) return;
+    const confirmed = window.confirm(
+      "Delete this story? This can't be undone.",
+    );
+    if (!confirmed) return;
+
+    try {
+      setDeleting(true);
+      const token = await user.getIdToken();
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/stories/${story.id}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
+
+      const remaining = stories.filter((s) => s.id !== story.id);
+      setStories(remaining);
+      setShowMenu(false);
+
+      if (remaining.length === 0) {
+        router.push("/feed");
+      } else if (currentIndex >= remaining.length) {
+        setCurrentIndex(remaining.length - 1);
+      }
+    } catch (err) {
+      console.error("Failed to delete story:", err);
+      alert("Failed to delete story. Please try again.");
+    } finally {
+      setDeleting(false);
+    }
+  };
   const goTo = useCallback(
     (index: number) => {
       if (transitioning) return;
@@ -215,14 +273,10 @@ const fetchViews = useCallback(
   }, [paused, stories, currentIndex, loaded, goNext]);
 
   useEffect(() => {
-    if (stories.length === 0) return;
-    const seen = JSON.parse(
-      localStorage.getItem("seenStories") ?? "[]",
-    ) as string[];
-    if (!seen.includes(username)) {
-      localStorage.setItem("seenStories", JSON.stringify([...seen, username]));
-    }
-  }, [stories, username]);
+    const story = stories[currentIndex];
+    if (!story || !loaded) return;
+    markStoryIdSeen(story.id);
+  }, [currentIndex, stories, loaded]);
 
   const handleHoldStart = () => {
     holdTimeout.current = setTimeout(() => {
@@ -239,6 +293,12 @@ const fetchViews = useCallback(
 
   const story = stories[currentIndex];
   const isOwner = story?.author.id === currentUserId;
+
+  useEffect(() => {
+    if (fetchDone && stories.length === 0) {
+      router.replace("/feed");
+    }
+  }, [fetchDone, stories.length, router]);
 
   if (!story) {
     return (
@@ -319,7 +379,11 @@ const fetchViews = useCallback(
           {paused && !showViews && (
             <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none">
               <div className="bg-black/30 rounded-full p-4 backdrop-blur-sm">
-                <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className="w-8 h-8 text-white"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <rect x="6" y="4" width="4" height="16" rx="1" />
                   <rect x="14" y="4" width="4" height="16" rx="1" />
                 </svg>
@@ -338,8 +402,14 @@ const fetchViews = useCallback(
                   <div
                     className="h-full bg-white rounded-full"
                     style={{
-                      width: i < currentIndex ? "100%" : i === currentIndex ? `${progress}%` : "0%",
-                      transition: i === currentIndex ? `width ${TICK}ms linear` : "none",
+                      width:
+                        i < currentIndex
+                          ? "100%"
+                          : i === currentIndex
+                            ? `${progress}%`
+                            : "0%",
+                      transition:
+                        i === currentIndex ? `width ${TICK}ms linear` : "none",
                     }}
                   />
                 </div>
@@ -350,10 +420,15 @@ const fetchViews = useCallback(
               <div className="flex items-center gap-2.5">
                 <div className="relative h-9 w-9 rounded-full overflow-hidden ring-2 ring-white/80 shrink-0">
                   {story.author.avatarUrl ? (
-                    <Image src={story.author.avatarUrl} alt="" fill className="object-cover" />
+                    <Image
+                      src={story.author.avatarUrl}
+                      alt=""
+                      fill
+                      className="object-cover"
+                    />
                   ) : (
                     <div className="w-full h-full bg-linear-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white text-xs font-bold">
-                      {story.author.username[0].toUpperCase()}
+                      {story.author.username?.[0]?.toUpperCase() ?? "?"}
                     </div>
                   )}
                 </div>
@@ -367,14 +442,64 @@ const fetchViews = useCallback(
                 </div>
               </div>
 
-              <button
-                onClick={() => router.push("/feed")}
-                className="text-white/80 hover:text-white transition-colors p-1"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+              <div className="flex items-center gap-1">
+                {isOwner && (
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowMenu((v) => !v)}
+                      className="text-white/80 hover:text-white transition-colors p-1"
+                      disabled={deleting}
+                    >
+                      <svg
+                        className="w-5 h-5"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle cx="12" cy="5" r="1.5" />
+                        <circle cx="12" cy="12" r="1.5" />
+                        <circle cx="12" cy="19" r="1.5" />
+                      </svg>
+                    </button>
+
+                    {showMenu && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-40"
+                          onClick={() => setShowMenu(false)}
+                        />
+                        <div className="absolute right-0 top-full mt-1 z-50 bg-[#1c1c1c] rounded-lg overflow-hidden shadow-lg min-w-32">
+                          <button
+                            onClick={handleDelete}
+                            disabled={deleting}
+                            className="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-white/5 transition-colors disabled:opacity-50"
+                          >
+                            {deleting ? "Deleting..." : "Delete story"}
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                <button
+                  onClick={() => router.push("/feed")}
+                  className="text-white/80 hover:text-white transition-colors p-1"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2.5}
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -393,10 +518,25 @@ const fetchViews = useCallback(
           {showViews && (
             <div className="absolute inset-x-0 bottom-0 z-40 bg-[#1c1c1c] rounded-t-2xl max-h-[60%] flex flex-col">
               <div className="flex items-center justify-between px-4 py-3 border-b border-[#262626]">
-                <span className="text-white font-semibold">Views ({views.length})</span>
-                <button onClick={handleHideViews} className="text-white/60 hover:text-white">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                <span className="text-white font-semibold">
+                  Views ({views.length})
+                </span>
+                <button
+                  onClick={handleHideViews}
+                  className="text-white/60 hover:text-white"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2.5}
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </button>
               </div>
@@ -407,20 +547,33 @@ const fetchViews = useCallback(
                   </div>
                 ) : (
                   views.map((v) => (
-                    <div key={v.viewerId} className="flex items-center gap-3 px-4 py-3">
+                    <div
+                      key={v.viewerId}
+                      className="flex items-center gap-3 px-4 py-3"
+                    >
                       <div className="relative w-10 h-10 rounded-full overflow-hidden bg-[#262626] shrink-0">
                         {v.viewer.avatarUrl ? (
-                          <Image src={v.viewer.avatarUrl} alt="" fill className="object-cover" />
+                          <Image
+                            src={v.viewer.avatarUrl}
+                            alt=""
+                            fill
+                            className="object-cover"
+                          />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-white text-sm font-bold bg-linear-to-br from-purple-500 to-pink-500">
-                            {v.viewer.username[0].toUpperCase()}
+                            {v.viewer.username?.[0]?.toUpperCase() ?? "?"}
                           </div>
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-white text-sm font-medium truncate">{v.viewer.username}</p>
+                        <p className="text-white text-sm font-medium truncate">
+                          {v.viewer.username}
+                        </p>
                         <p className="text-white/40 text-xs">
-                          {new Date(v.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          {new Date(v.createdAt).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
                         </p>
                       </div>
                     </div>

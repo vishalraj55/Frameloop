@@ -59,10 +59,10 @@ function FeedSkeleton() {
   }
   @keyframes shimmerBg { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 `}</style>
-      <div className="flex gap-4 px-4 py-4 border-b border-[#1a1a1a] overflow-hidden">
+      <div className="flex gap-3 px-3 py-6 overflow-hidden">
         {Array.from({ length: 7 }).map((_, i) => (
-          <div key={i} className="flex flex-col items-center gap-2 shrink-0">
-            <div className="w-15.5 h-15.5 rounded-full bg-[#141414] shimmer" />
+          <div key={i} className="flex flex-col items-center gap-1 w-21 shrink-0">
+            <div className="w-21 h-21 rounded-full bg-[#141414] shimmer" />
             <div className="h-2 w-10 rounded-full bg-neutral-800 shimmer" />
           </div>
         ))}

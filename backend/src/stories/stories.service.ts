@@ -30,7 +30,7 @@ export class StoriesService {
       },
       include: {
         author: {
-          select: { username: true, avatarUrl: true },
+          select: { id: true, username: true, avatarUrl: true },
         },
         views: { select: { viewerId: true } },
       },
@@ -102,5 +102,16 @@ export class StoriesService {
     return this.prisma.story.create({
       data: { imageUrl, authorId, expiresAt },
     });
+  }
+  async deleteStory(storyId: string, requestingUserId: string) {
+    const story = await this.prisma.story.findUnique({
+      where: { id: storyId },
+    });
+    if (!story) throw new NotFoundException('Story not found');
+    if (story.authorId !== requestingUserId)
+      throw new ForbiddenException('Only the author can delete this story');
+
+    await this.prisma.story.delete({ where: { id: storyId } });
+    return { success: true };
   }
 }

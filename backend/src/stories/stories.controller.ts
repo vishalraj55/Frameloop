@@ -9,6 +9,7 @@ import {
   BadRequestException,
   UseGuards,
   Req,
+  Delete,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -46,7 +47,11 @@ export class StoriesController {
   getViews(@Param('id') storyId: string, @Req() req: AuthRequest) {
     return this.storiesService.getViews(storyId, req.user.id);
   }
-
+  @Delete(':id')
+  @UseGuards(FirebaseAuthGuard)
+  deleteStory(@Param('id') storyId: string, @Req() req: AuthRequest) {
+    return this.storiesService.deleteStory(storyId, req.user.id);
+  }
   @Post()
   @UseGuards(FirebaseAuthGuard)
   @UseInterceptors(FileInterceptor('image', { storage: memoryStorage() }))
