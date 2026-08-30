@@ -39,10 +39,6 @@ a {
   text-decoration: none;
 }
 
-a:hover {
-  text-decoration: underline;
-}
-
 img {
   display: block;
   border: 0;
@@ -71,11 +67,6 @@ button {
 * {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-* {
-  transition: none;
-  animation: none;
 }
 
 /* 404 error page */

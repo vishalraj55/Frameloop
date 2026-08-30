@@ -388,7 +388,7 @@ export default function StoriesBar() {
               }`}
             >
               <div className="p-0.5 rounded-full bg-black">
-                <div className="relative w-14.5 h-14.5 rounded-full bg-[#1c1c1c] flex items-center justify-center overflow-hidden">
+                <div className="relative w-21 h-21 rounded-full bg-[#1c1c1c] flex items-center justify-center overflow-hidden">
                   {ownGroup.avatarUrl ? (
                     <Image
                       src={ownGroup.avatarUrl}

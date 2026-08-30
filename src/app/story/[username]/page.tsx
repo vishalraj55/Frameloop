@@ -293,6 +293,8 @@ export default function StoryPage() {
 
   const story = stories[currentIndex];
   const isOwner = story?.author.id === currentUserId;
+  const hasPrev = currentIndex > 0;
+  const hasNext = currentIndex < stories.length - 1;
 
   useEffect(() => {
     if (fetchDone && stories.length === 0) {
@@ -312,7 +314,6 @@ export default function StoryPage() {
 
   return (
     <div className="fixed inset-0 z-50 bg-black">
-
       {/* Blurred background — fills entire screen */}
       <div className="absolute inset-0 overflow-hidden">
         {storyIsVideo ? (
@@ -335,11 +336,53 @@ export default function StoryPage() {
         )}
       </div>
 
+      {hasPrev && (
+        <button
+          onClick={goPrev}
+          className="hidden md:flex absolute left-8 top-1/2 -translate-y-1/2 z-30 items-center justify-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+        >
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.5}
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+        </button>
+      )}
+
+      {hasNext && (
+        <button
+          onClick={goNext}
+          className="hidden md:flex absolute right-8 top-1/2 -translate-y-1/2 z-30 items-center justify-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+        >
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.5}
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+        </button>
+      )}
+
       <div className="absolute inset-0 flex items-center justify-center">
         <div
           className="
             relative w-full h-full
-            md:w-97.5 md:h-full md:max-h-screen
+            md:w-110 md:h-[80vh] md:max-h-screen md:rounded-2xl md:overflow-hidden md:shadow-2xl
           "
         >
           {/* Media */}

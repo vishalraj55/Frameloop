@@ -219,9 +219,11 @@ function PostTile({
 function CommentSection({
   postId,
   userId,
+  header,
 }: {
   postId: string;
   userId: string;
+  header?: React.ReactNode;
 }) {
   const { user } = useAuth();
   const [comments, setComments] = useState<Comment[]>([]);
@@ -616,6 +618,7 @@ function CommentSection({
         }
       `}</style>
       <div className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-4">
+        {header}
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="w-6 h-6 rounded-full border-2 border-neutral-800 border-t-neutral-400 animate-spin" />
@@ -669,8 +672,6 @@ function CommentSection({
           ))
         )}
       </div>
-
-      {/* Input */}
       <div
         className="shrink-0"
         style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
@@ -704,7 +705,9 @@ function CommentSection({
               if (e.key === "Enter") void handlePost();
             }}
             placeholder={
-              replyingTo ? `Reply to @${replyingTo.username}...` : "comment..."
+              replyingTo
+                ? `Reply to @${replyingTo.username}...`
+                : "comment..."
             }
             className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-neutral-600"
           />
@@ -924,33 +927,38 @@ function LightboxModal({
           </div>
 
           {/*Caption+comments*/}
-          <div className="flex-1 overflow-y-auto min-h-0">
-            {post.caption && post.author && (
-              <div
-                className="flex items-start gap-3 px-4 py-3"
-                style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}
-              >
-                <Avatar
-                  src={post.author.avatarUrl}
-                  name={post.author.username}
-                  size={30}
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-white text-[13px] leading-snug">
-                    <span className="font-semibold mr-1">
-                      {post.author.username}
-                    </span>
-                    <span className="text-neutral-300">{post.caption}</span>
-                  </p>
-                  {post.createdAt && (
-                    <p className="text-neutral-600 text-[11px] mt-1">
-                      {getRelativeTime(post.createdAt)}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-            <CommentSection postId={post.id} userId={userId} />
+          <div className="flex-1 min-h-0 flex flex-col">
+            <CommentSection
+              postId={post.id}
+              userId={userId}
+              header={
+                post.caption && post.author ? (
+                  <div
+                    className="flex items-start gap-3 -mx-4 -mt-3 px-4 py-3"
+                    style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}
+                  >
+                    <Avatar
+                      src={post.author.avatarUrl}
+                      name={post.author.username}
+                      size={30}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white text-[13px] leading-snug">
+                        <span className="font-semibold mr-1">
+                          {post.author.username}
+                        </span>
+                        <span className="text-neutral-300">{post.caption}</span>
+                      </p>
+                      {post.createdAt && (
+                        <p className="text-neutral-600 text-[11px] mt-1">
+                          {getRelativeTime(post.createdAt)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ) : undefined
+              }
+            />
           </div>
 
           {/*Actions*/}

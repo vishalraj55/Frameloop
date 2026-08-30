@@ -263,7 +263,7 @@ export default function TopBar() {
   );
 
   const title = useMemo(() => {
-    if (!isProfile) return "Frameloop";
+    if (!isProfile) return "Frameloops";
     if (pathname?.includes("/followers")) return `${username}'s followers`;
     if (pathname?.includes("/following")) return `${username}'s following`;
     return username;
@@ -273,7 +273,7 @@ export default function TopBar() {
     () =>
       isProfile
         ? "system-ui,-apple-system,sans-serif"
-        : '"Billabong",cursive,"Segoe Script","Apple Chancery"',
+        : '"Playfair Display",Georgia,"Times New Roman",serif',
     [isProfile],
   );
 
@@ -290,10 +290,10 @@ export default function TopBar() {
 
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-50 bg-black border-b border-[#191919] h-14">
-        <div className="max-w-3xl mx-auto h-full flex items-center justify-between px-4">
+      <header className="fixed inset-x-0 top-0 z-50 bg-black h-14">
+        <div className="max-w-4xl mx-auto h-full flex items-center justify-between px-4">
           <h1
-            className="text-white text-lg tracking-wide select-none truncate max-w-[60%]"
+            className="text-white text-2xl tracking-wide select-none truncate max-w-[80%]"
             style={{ fontFamily: font }}
           >
             {title}
