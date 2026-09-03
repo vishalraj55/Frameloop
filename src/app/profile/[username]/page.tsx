@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { Grid2x2, Bookmark, Plus } from "lucide-react";
+import { useTheme, THEME_COLORS } from "@/context/ThemeContext";
 
 interface UserProfile {
   id: string;
@@ -32,6 +33,8 @@ export default function ProfilePage() {
   const username = params?.username as string;
 
   const { user, loading: authLoading } = useAuth();
+  const { resolvedTheme } = useTheme();
+  const c = THEME_COLORS[resolvedTheme];
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -136,39 +139,54 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <main className="bg-black min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
+      <main
+        className="h-full flex items-center justify-center"
+        style={{ background: c.bg }}
+      >
+        <div
+          className="w-8 h-8 rounded-full animate-spin"
+          style={{ border: `2px solid ${c.border}`, borderTopColor: c.text }}
+        />
       </main>
     );
   }
 
   if (!profile) {
     return (
-      <main className="bg-black min-h-screen flex items-center justify-center text-white text-sm">
+      <main
+        className="min-h-screen flex items-center justify-center text-sm"
+        style={{ background: c.bg, color: c.text }}
+      >
         User not found.
       </main>
     );
   }
 
   return (
-    <div className="bg-black text-white min-h-screen">
+    <div className="min-h-screen" style={{ background: c.bg, color: c.text }}>
       <div className="max-w-233.75 mx-auto">
         {/* Profile header */}
         <div className="flex items-center gap-5 px-4 pt-6 pb-4 md:gap-15 md:px-8 md:pt-10 md:pb-6">
           {/* Avatar */}
           <Link
             href={profile.hasActiveStory ? `/story/${profile.username}` : "#"}
-            className="shrink-0"
+            className="shrink-10"
           >
             <div
               className={`p-0.5 rounded-full ${
                 profile.hasActiveStory
                   ? "bg-linear-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888]"
-                  : "bg-[#262626]"
+                  : ""
               }`}
+              style={
+                !profile.hasActiveStory ? { background: c.border } : undefined
+              }
             >
-              <div className="p-0.75 rounded-full bg-black">
-                <div className="relative w-19.25 h-19.25 md:w-37.5 md:h-37.5 rounded-full overflow-hidden bg-[#1c1c1c]">
+              <div className="p-0.75 rounded-full" style={{ background: c.bg }}>
+                <div
+                  className="relative w-19.25 h-19.25 md:w-37.5 md:h-37.5 rounded-full overflow-hidden"
+                  style={{ background: c.card }}
+                >
                   {profile.avatarUrl ? (
                     <Image
                       src={profile.avatarUrl}
@@ -198,7 +216,10 @@ export default function ProfilePage() {
             <div className="hidden md:block mt-4 mb-4">
               {/* <p className="text-[14px] font-semibold">{profile.fullName}</p> */}
               {profile.bio && (
-                <p className="mt-1 text-[14px] text-[#f5f5f5] whitespace-pre-line leading-snug">
+                <p
+                  className="mt-1 text-[14px] whitespace-pre-line leading-snug"
+                  style={{ color: c.text }}
+                >
                   {profile.bio}
                 </p>
               )}
@@ -245,20 +266,25 @@ export default function ProfilePage() {
                 <>
                   <Link
                     href="/settings/profile"
-                    className="flex-1 inline-flex items-center justify-center bg-[#363636] rounded-lg py-2 px-4 text-[13px] md:text-[14px] font-semibold text-white transition-colors"
+                    className="flex-1 inline-flex items-center justify-center rounded-lg py-2 px-4 text-[13px] md:text-[14px] font-semibold transition-colors"
+                    style={{ background: c.cardMuted, color: c.text }}
                   >
                     Edit profile
                   </Link>
                   <Link
                     href="/archive"
-                    className="flex-1 inline-flex items-center justify-center bg-[#363636] rounded-lg py-2 px-4 text-[13px] md:text-[14px] font-semibold text-white transition-colors"
+                    className="flex-1 inline-flex items-center justify-center rounded-lg py-2 px-4 text-[13px] md:text-[14px] font-semibold transition-colors"
+                    style={{ background: c.cardMuted, color: c.text }}
                   >
                     View archive
                   </Link>
                 </>
               ) : (
                 <>
-                  <div className="relative flex-1 inline-flex items-center justify-center bg-[#363636] rounded-lg py-2 px-4 text-[13px] md:text-[14px] font-semibold text-white transition-colors">
+                  <div
+                    className="relative flex-1 inline-flex items-center justify-center rounded-lg py-2 px-4 text-[13px] md:text-[14px] font-semibold transition-colors"
+                    style={{ background: c.cardMuted, color: c.text }}
+                  >
                     <button
                       onClick={() => {
                         if (isFollowing) {
@@ -268,7 +294,8 @@ export default function ProfilePage() {
                         }
                       }}
                       disabled={followLoading}
-                      className="w-full inline-flex items-center justify-center gap-1.5 bg-[#363636] rounded-lg py-2 px-4 text-[13px] md:text-[14px] font-semibold text-white disabled:opacity-70 transition-colors"
+                      className="w-full inline-flex items-center justify-center gap-1.5 rounded-lg py-2 px-4 text-[13px] md:text-[14px] font-semibold disabled:opacity-70 transition-colors"
+                      style={{ background: c.cardMuted, color: c.text }}
                     >
                       {followLoading ? (
                         <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
@@ -302,7 +329,10 @@ export default function ProfilePage() {
                           className="fixed inset-0 z-10"
                           onClick={() => setShowUnfollowMenu(false)}
                         />
-                        <div className="absolute left-0 right-0 top-full mt-1 z-20 bg-[#262626] rounded-xl overflow-hidden shadow-xl border border-[#3f3f3f]">
+                        <div
+                          className="absolute left-0 right-0 top-full mt-1 z-20 rounded-xl overflow-hidden shadow-xl border"
+                          style={{ background: c.card, borderColor: c.border }}
+                        >
                           <button
                             onClick={() => {
                               setShowUnfollowMenu(false);
@@ -319,7 +349,8 @@ export default function ProfilePage() {
                   </div>
 
                   {/* <button
-                    className="flex-1 inline-flex items-center justify-center bg-[#363636] rounded-lg py-2 px-4 text-[13px] md:text-[14px] font-semibold text-white transition-colors"
+                    className="flex-1 inline-flex items-center justify-center rounded-lg py-2 px-4 text-[13px] md:text-[14px] font-semibold transition-colors"
+                    style={{ background: c.cardMuted, color: c.text }}
                     onClick={() => router.push(`/messages/${username}`)}
                   >
                     Message
@@ -334,7 +365,7 @@ export default function ProfilePage() {
         <div className="md:hidden px-4 pb-4">
           {/* <p className="text-[13px] font-semibold">{profile.fullName}</p> */}
           {profile.bio && (
-            <p className="mt-1 text-[13px] text-[#f5f5f5] whitespace-pre-line leading-snug">
+            <p className="mt-1 text-[13px] whitespace-pre-line leading-snug">
               {profile.bio}
             </p>
           )}
@@ -344,7 +375,10 @@ export default function ProfilePage() {
         <div className="flex gap-4 md:gap-6 px-4 md:px-8 pb-4 md:pb-6 overflow-x-auto scrollbar-hide">
           {isOwnProfile && (
             <div className="flex flex-col items-center gap-1 shrink-0">
-              <div className="w-14 h-14 md:w-19.25 md:h-19.25 rounded-full border border-[#363636] bg-[#1c1c1c] flex items-center justify-center">
+              <div
+                className="w-14 h-14 md:w-19.25 md:h-19.25 rounded-full border flex items-center justify-center"
+                style={{ borderColor: c.border, background: c.card }}
+              >
                 <Plus size={20} className="text-white md:w-6 md:h-6" />
               </div>
               <span className="text-[11px] md:text-[12px] text-white">New</span>
@@ -353,14 +387,14 @@ export default function ProfilePage() {
         </div>
 
         {/* Tab bar */}
-        <div className="flex border-t border-[#262626] py-2 ">
+        <div className="flex py-4">
           <button
             onClick={() => setActiveTab("posts")}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-3 md:py-3.25 text-[12px] md:text-[13px] font-semibold tracking-widest uppercase transition-colors ${
-              activeTab === "posts"
-                ? "border-t border-white text-white"
-                : "text-[#8e8e8e] hover:text-[#ccc]"
-            }`}
+            className="flex-1 flex items-center justify-center gap-1.5 py-3 md:py-3.25 text-[12px] md:text-[13px] font-semibold tracking-widest uppercase transition-colors border-t"
+            style={{
+              borderColor: activeTab === "posts" ? c.text : "transparent",
+              color: activeTab === "posts" ? c.text : c.textMuted,
+            }}
           >
             <Grid2x2 size={15} />
             <span className="hidden sm:inline">Posts</span>
@@ -368,11 +402,11 @@ export default function ProfilePage() {
           {isOwnProfile && (
             <button
               onClick={() => setActiveTab("saved")}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-3 md:py-3.25 text-[12px] md:text-[13px] font-semibold tracking-widest uppercase transition-colors ${
-                activeTab === "saved"
-                  ? "border-t border-white text-white"
-                  : "text-[#8e8e8e] hover:text-[#ccc]"
-              }`}
+              className="flex-1 flex items-center justify-center gap-1.5 py-3 md:py-3.25 text-[12px] md:text-[13px] font-semibold tracking-widest uppercase transition-colors border-t"
+              style={{
+                borderColor: activeTab === "saved" ? c.text : "transparent",
+                color: activeTab === "saved" ? c.text : c.textMuted,
+              }}
             >
               <Bookmark size={13} />
               <span className="hidden sm:inline">Saved</span>

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'frameloops-v1';
+const CACHE_NAME = 'frameloops-v2';
 const STATIC_ASSETS = [
   '/',
   '/feed',

@@ -54,7 +54,7 @@ export default function EditPostPage({
       } catch {
         setError("Failed to load post.");
       } finally {
-        setPageLoading(false)
+        setPageLoading(false);
       }
     })();
   }, [id, user, loading, router]);
@@ -82,8 +82,8 @@ export default function EditPostPage({
 
   if (pageLoading || loading) {
     return (
-      <main className="min-h-screen bg-black flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+      <main className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
       </main>
     );
   }
@@ -91,15 +91,12 @@ export default function EditPostPage({
   if (!post) return null;
 
   return (
-    <main className="min-h-screen bg-black">
+    <main className="min-h-screen bg-background">
       {/* Header */}
-      <div
-        className="sticky top-0 z-10 flex items-center px-4 py-3 border-b border-neutral-800"
-        style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(12px)" }}
-      >
+      <div className="sticky top-0 z-10 flex items-center px-4 py-3 border-b border-border backdrop-blur-md bg-background/75">
         <button
           onClick={() => router.back()}
-          className="text-white absolute left-4"
+          className="text-foreground absolute left-4"
           aria-label="Go back"
         >
           <svg
@@ -115,7 +112,7 @@ export default function EditPostPage({
             <path d="M15 18l-6-6 6-6" />
           </svg>
         </button>
-        <p className="text-white font-semibold text-[15px] mx-auto">
+        <p className="text-foreground font-semibold text-[15px] mx-auto">
           Edit post
         </p>
         <button
@@ -128,7 +125,7 @@ export default function EditPostPage({
       </div>
 
       {/* Body */}
-      <div className="flex flex-col items-center px-4 pt-6 gap-5 max-w-120 mx-auto">
+      <div className="flex flex-col items-center px-4 pt-6 gap-5 max-w-120 mx-auto sm:pt-10">
         {/* Post image preview */}
         <div className="relative w-full aspect-4/3">
           <Image
@@ -141,16 +138,18 @@ export default function EditPostPage({
 
         {/* Caption textarea */}
         <div className="w-full">
-          <label className="text-neutral-400 text-xs mb-1 block">Caption</label>
+          <label className="text-muted-foreground text-xs mb-1 block">
+            Caption
+          </label>
           <textarea
             value={caption}
             onChange={(e) => setCaption(e.target.value)}
             placeholder="Write a caption…"
             rows={4}
             maxLength={2200}
-            className="w-full bg-neutral-900 text-white text-[15px] rounded-xl px-4 py-3 resize-none outline-none border border-neutral-800 focus:border-neutral-600 placeholder:text-neutral-600"
+            className="w-full bg-muted text-foreground text-[15px] rounded-xl px-4 py-3 resize-none outline-none border border-border focus:border-ring placeholder:text-muted-foreground"
           />
-          <p className="text-neutral-600 text-xs text-right mt-1">
+          <p className="text-muted-foreground text-xs text-right mt-1">
             {caption.length} / 2200
           </p>
         </div>

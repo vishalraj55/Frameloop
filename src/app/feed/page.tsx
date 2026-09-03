@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import Post from "@/components/Post";
 import StoriesBar from "@/components/StoriesBar";
 import { useAuth } from "@/context/AuthContext";
+import { useTheme, THEME_COLORS } from "@/context/ThemeContext";
 
 interface PostType {
   id: string;
@@ -21,32 +22,73 @@ interface PostType {
 
 const PAGE_SIZE = 10;
 
-function PostSkeleton() {
+function PostSkeleton({
+  c,
+}: {
+  c: (typeof THEME_COLORS)[keyof typeof THEME_COLORS];
+}) {
   return (
-    <div className="border-b border-[#1a1a1a] pb-4 mb-1 overflow-hidden">
+    <div
+      className="border-b pb-4 mb-1 overflow-hidden"
+      style={{ borderColor: c.border }}
+    >
       <div className="flex items-center gap-3 px-4 py-3">
-        <div className="w-9 h-9 rounded-full bg-[#1e1e1e] shrink-0 shimmer" />
+        <div
+          className="w-9 h-9 rounded-full shrink-0 shimmer"
+          style={{ background: c.card }}
+        />
         <div className="flex flex-col gap-1.5 flex-1">
-          <div className="h-2.5 w-24 rounded-full bg-[#1e1e1e] shimmer" />
-          <div className="h-2 w-16 rounded-full bg-[#181818] shimmer" />
+          <div
+            className="h-2.5 w-24 rounded-full shimmer"
+            style={{ background: c.card }}
+          />
+          <div
+            className="h-2 w-16 rounded-full shimmer"
+            style={{ background: c.cardMuted }}
+          />
         </div>
       </div>
-      <div className="w-full aspect-square bg-[#141414] shimmer" />
+      <div
+        className="w-full aspect-square shimmer"
+        style={{ background: c.cardFaint }}
+      />
       <div className="px-4 pt-3 flex items-center gap-4">
-        <div className="h-5 w-5 rounded-full bg-[#1e1e1e] shimmer" />
-        <div className="h-5 w-5 rounded-full bg-[#1e1e1e] shimmer" />
-        <div className="h-5 w-5 rounded-full bg-[#1e1e1e] shimmer" />
+        <div
+          className="h-5 w-5 rounded-full shimmer"
+          style={{ background: c.card }}
+        />
+        <div
+          className="h-5 w-5 rounded-full shimmer"
+          style={{ background: c.card }}
+        />
+        <div
+          className="h-5 w-5 rounded-full shimmer"
+          style={{ background: c.card }}
+        />
       </div>
       <div className="px-4 pt-3 flex flex-col gap-2">
-        <div className="h-2.5 w-20 rounded-full bg-[#1e1e1e] shimmer" />
-        <div className="h-2.5 w-4/5 rounded-full bg-[#181818] shimmer" />
-        <div className="h-2.5 w-1/2 rounded-full bg-[#161616] shimmer" />
+        <div
+          className="h-2.5 w-20 rounded-full shimmer"
+          style={{ background: c.card }}
+        />
+        <div
+          className="h-2.5 w-4/5 rounded-full shimmer"
+          style={{ background: c.cardMuted }}
+        />
+        <div
+          className="h-2.5 w-1/2 rounded-full shimmer"
+          style={{ background: c.cardFaint }}
+        />
       </div>
     </div>
   );
 }
 
-function FeedSkeleton() {
+function FeedSkeleton({
+  c,
+}: {
+  c: (typeof THEME_COLORS)[keyof typeof THEME_COLORS];
+}) {
   return (
     <>
       <style>{`
@@ -61,20 +103,35 @@ function FeedSkeleton() {
 `}</style>
       <div className="flex gap-3 px-3 py-6 overflow-hidden">
         {Array.from({ length: 7 }).map((_, i) => (
-          <div key={i} className="flex flex-col items-center gap-1 w-21 shrink-0">
-            <div className="w-21 h-21 rounded-full bg-[#141414] shimmer" />
-            <div className="h-2 w-10 rounded-full bg-neutral-800 shimmer" />
+          <div
+            key={i}
+            className="flex flex-col items-center gap-1 w-21 shrink-0"
+          >
+            <div
+              className="w-21 h-21 rounded-full shimmer"
+              style={{ background: c.cardFaint }}
+            />
+            <div
+              className="h-2 w-10 rounded-full shimmer"
+              style={{ background: c.card }}
+            />
           </div>
         ))}
       </div>
       {Array.from({ length: 3 }).map((_, i) => (
-        <PostSkeleton key={i} />
+        <PostSkeleton key={i} c={c} />
       ))}
     </>
   );
 }
 
-function RefreshIndicator({ progress }: { progress: number }) {
+function RefreshIndicator({
+  progress,
+  c,
+}: {
+  progress: number;
+  c: (typeof THEME_COLORS)[keyof typeof THEME_COLORS];
+}) {
   const size = 28;
   const radius = 10;
   const circumference = 2 * Math.PI * radius;
@@ -101,7 +158,7 @@ function RefreshIndicator({ progress }: { progress: number }) {
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="#262626"
+          stroke={c.border}
           strokeWidth={2}
         />
         <circle
@@ -109,7 +166,7 @@ function RefreshIndicator({ progress }: { progress: number }) {
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="#f0f0f0"
+          stroke={c.text}
           strokeWidth={2}
           strokeDasharray={`${dash} ${circumference}`}
           strokeLinecap="round"
@@ -118,14 +175,22 @@ function RefreshIndicator({ progress }: { progress: number }) {
     </div>
   );
 }
-function EmptyFeed() {
+
+function EmptyFeed({
+  c,
+}: {
+  c: (typeof THEME_COLORS)[keyof typeof THEME_COLORS];
+}) {
   return (
     <div className="flex flex-col items-center justify-center py-28 text-center px-8">
-      <div className="w-20 h-20 rounded-full border border-[#2a2a2a] bg-[#111] flex items-center justify-center mb-5">
+      <div
+        className="w-20 h-20 rounded-full border flex items-center justify-center mb-5"
+        style={{ borderColor: c.border, background: c.card }}
+      >
         <svg
-          className="w-8 h-8 text-[#444]"
+          className="w-8 h-8"
           fill="none"
-          stroke="currentColor"
+          stroke={c.textFaint}
           strokeWidth={1.25}
           viewBox="0 0 24 24"
         >
@@ -141,10 +206,13 @@ function EmptyFeed() {
           />
         </svg>
       </div>
-      <p className="text-[#f0f0f0] font-semibold text-[15px] mb-1">
+      <p className="font-semibold text-[15px] mb-1" style={{ color: c.text }}>
         No posts yet
       </p>
-      <p className="text-[#555] text-[13px] leading-relaxed max-w-55">
+      <p
+        className="text-[13px] leading-relaxed max-w-55"
+        style={{ color: c.textMuted }}
+      >
         Follow people to see their photos here.
       </p>
     </div>
@@ -155,6 +223,8 @@ function EmptyFeed() {
 
 export default function FeedPage() {
   const { user, loading: authLoading } = useAuth();
+  const { resolvedTheme } = useTheme();
+  const c = THEME_COLORS[resolvedTheme];
   const [posts, setPosts] = useState<PostType[]>([]);
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [hasMore, setHasMore] = useState(true);
@@ -262,28 +332,35 @@ export default function FeedPage() {
 
   return (
     <div
-      className="min-h-screen bg-black"
+      className="min-h-screen"
+      style={{ background: c.bg }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={() => void handleTouchEnd()}
     >
-      {!refreshing && <RefreshIndicator progress={pullProgress} />}
+      {!refreshing && <RefreshIndicator progress={pullProgress} c={c} />}
 
       {refreshing && (
         <div className="flex justify-center py-3">
-          <div className="w-5 h-5 border-[1.5px] border-[#333] border-t-[#f0f0f0] rounded-full animate-spin" />
+          <div
+            className="w-5 h-5 rounded-full animate-spin"
+            style={{
+              border: `1.5px solid ${c.border}`,
+              borderTopColor: c.text,
+            }}
+          />
         </div>
       )}
 
       <div className="mx-auto w-full max-w-160">
         {initialLoading ? (
-          <FeedSkeleton />
+          <FeedSkeleton c={c} />
         ) : (
           <main>
             <StoriesBar />
 
             {posts.length === 0 ? (
-              <EmptyFeed />
+              <EmptyFeed c={c} />
             ) : (
               <>
                 {posts.map((post, index) => (
@@ -305,15 +382,24 @@ export default function FeedPage() {
 
                 <div ref={sentinelRef} className="py-8 flex justify-center">
                   {loadingMore && (
-                    <div className="w-5 h-5 border-[1.5px] border-[#333] border-t-[#f0f0f0] rounded-full animate-spin" />
+                    <div
+                      className="w-5 h-5 rounded-full animate-spin"
+                      style={{
+                        border: `1.5px solid ${c.border}`,
+                        borderTopColor: c.text,
+                      }}
+                    />
                   )}
                   {!hasMore && posts.length > 0 && (
                     <div className="flex items-center gap-3">
-                      <div className="h-px w-12 bg-black" />
-                      <p className="text-[#444] text-[11px] tracking-widest uppercase">
+                      <div className="h-px w-12" style={{ background: c.bg }} />
+                      <p
+                        className="text-[11px] tracking-widest uppercase"
+                        style={{ color: c.textFaint }}
+                      >
                         all caught up
                       </p>
-                      <div className="h-px w-12 bg-black" />
+                      <div className="h-px w-12" style={{ background: c.bg }} />
                     </div>
                   )}
                 </div>

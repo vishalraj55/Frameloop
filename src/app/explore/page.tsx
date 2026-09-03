@@ -23,8 +23,11 @@ import {
   Play,
 } from "lucide-react";
 import Link from "next/link";
+import { useTheme, THEME_COLORS } from "@/context/ThemeContext";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
+
+type ThemeColors = (typeof THEME_COLORS)[keyof typeof THEME_COLORS];
 
 interface Author {
   id: string;
@@ -97,23 +100,23 @@ function Avatar({
   );
 }
 
-function GridSkeleton() {
+function GridSkeleton({ c }: { c: ThemeColors }) {
   return (
     <div className="grid grid-cols-3 gap-0.75 md:gap-2">
       {Array.from({ length: 12 }).map((_, i) => (
         <div
           key={i}
-          className={`relative bg-[#111] overflow-hidden aspect-square rounded-none md:rounded-md ${
+          className={`relative overflow-hidden aspect-square rounded-none md:rounded-md ${
             i % 7 === 0
               ? "col-span-2 row-span-2 md:col-span-1 md:row-span-1"
               : ""
           }`}
+          style={{ background: c.cardFaint }}
         >
           <div
             className="absolute inset-0"
             style={{
-              background:
-                "linear-gradient(90deg, #111 0%, #1a1a1a 50%, #111 100%)",
+              background: `linear-gradient(90deg, ${c.cardFaint} 0%, ${c.cardMuted} 50%, ${c.cardFaint} 100%)`,
               backgroundSize: "200% 100%",
               animation: `shimmerBg 2.6s ease-in-out ${i * 0.08}s infinite`,
             }}
@@ -220,10 +223,14 @@ function CommentSection({
   postId,
   userId,
   header,
+  c,
+  ov,
 }: {
   postId: string;
   userId: string;
   header?: React.ReactNode;
+  c: ThemeColors;
+  ov: (o: number) => string;
 }) {
   const { user } = useAuth();
   const [comments, setComments] = useState<Comment[]>([]);
@@ -433,7 +440,8 @@ function CommentSection({
           onClick={() =>
             setMenuOpenId(menuOpenId === comment.id ? null : comment.id)
           }
-          className="opacity-0 group-hover:opacity-100 transition-opacity text-neutral-500 hover:text-white p-0.5"
+          className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5"
+          style={{ color: c.textFaint }}
         >
           <MoreHorizontal size={14} />
         </button>
@@ -441,9 +449,9 @@ function CommentSection({
           <div
             className="absolute right-0 top-6 z-20 rounded-2xl shadow-2xl overflow-hidden min-w-35"
             style={{
-              background: "rgba(30,30,30,0.95)",
+              background: c.card,
               backdropFilter: "blur(20px)",
-              border: "1px solid rgba(255,255,255,0.08)",
+              border: `1px solid ${ov(0.08)}`,
               animation: "menuPop 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)",
             }}
           >
@@ -456,18 +464,32 @@ function CommentSection({
                     setEditText(comment.text);
                     setMenuOpenId(null);
                   }}
-                  className="flex items-center gap-2.5 w-full px-4 py-3 text-[13px] text-white hover:bg-white/5 transition-colors"
+                  className="flex items-center gap-2.5 w-full px-4 py-3 text-[13px] transition-colors"
+                  style={{ color: c.text }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background = ov(0.05))
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background = "transparent")
+                  }
                 >
-                  <Pencil size={13} className="text-neutral-400 shrink-0" />{" "}
+                  <Pencil
+                    size={13}
+                    style={{ color: c.textMuted }}
+                    className="shrink-0"
+                  />{" "}
                   Edit
                 </button>
-                <div
-                  className="h-px mx-3"
-                  style={{ background: "rgba(255,255,255,0.06)" }}
-                />
+                <div className="h-px mx-3" style={{ background: ov(0.06) }} />
                 <button
                   onClick={() => void handleDelete(comment.id, parentId)}
-                  className="flex items-center gap-2.5 w-full px-4 py-3 text-[13px] text-red-400 hover:bg-white/5 transition-colors"
+                  className="flex items-center gap-2.5 w-full px-4 py-3 text-[13px] text-red-400 transition-colors"
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background = ov(0.05))
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background = "transparent")
+                  }
                 >
                   <Trash2 size={13} className="text-red-400 shrink-0" /> Delete
                 </button>
@@ -477,7 +499,13 @@ function CommentSection({
                 onClick={() => {
                   void handleReport(comment.id);
                 }}
-                className="flex items-center gap-2.5 w-full px-4 py-3 text-[13px] text-orange-400 hover:bg-[#363636] transition-colors"
+                className="flex items-center gap-2.5 w-full px-4 py-3 text-[13px] text-orange-400 transition-colors"
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.background = ov(0.05))
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.background = "transparent")
+                }
               >
                 <Flag size={13} className="text-orange-400 shrink-0" /> Report
               </button>
@@ -521,10 +549,11 @@ function CommentSection({
                   setEditText("");
                 }
               }}
-              className="flex-1 text-white text-sm px-3 py-1.5 rounded-xl outline-none"
+              className="flex-1 text-sm px-3 py-1.5 rounded-xl outline-none"
               style={{
-                background: "rgba(255,255,255,0.08)",
-                border: "1px solid rgba(255,255,255,0.15)",
+                background: ov(0.08),
+                border: `1px solid ${ov(0.15)}`,
+                color: c.text,
               }}
             />
             <button
@@ -538,35 +567,36 @@ function CommentSection({
                 setEditingId(null);
                 setEditText("");
               }}
-              className="text-neutral-500 text-xs"
+              className="text-xs"
+              style={{ color: c.textFaint }}
             >
               Cancel
             </button>
           </div>
         ) : (
           <>
-            <p className="text-white text-[13px] leading-snug">
-              <span className="font-semibold mr-1">
+            <p className="text-[13px] leading-snug">
+              <span className="font-semibold mr-1" style={{ color: c.text }}>
                 {comment.author.username}
               </span>
               <span
-                className={
-                  comment.isDeleted
-                    ? "text-neutral-600 italic"
-                    : "text-neutral-200"
-                }
+                className={comment.isDeleted ? "italic" : ""}
+                style={{ color: comment.isDeleted ? c.textFaint : c.textMuted }}
               >
                 {comment.isDeleted ? "This comment was deleted." : comment.text}
               </span>
             </p>
             <div className="flex items-center gap-3 mt-1">
-              <span className="text-neutral-600 text-[11px]">
+              <span className="text-[11px]" style={{ color: c.textFaint }}>
                 {getRelativeTime(comment.createdAt)}
               </span>
               {!comment.isDeleted && (
                 <>
                   {comment.likesCount > 0 && (
-                    <span className="text-neutral-500 text-[11px] font-semibold">
+                    <span
+                      className="text-[11px] font-semibold"
+                      style={{ color: c.textMuted }}
+                    >
                       {comment.likesCount} likes
                     </span>
                   )}
@@ -578,7 +608,8 @@ function CommentSection({
                       });
                       inputRef.current?.focus();
                     }}
-                    className="text-neutral-500 hover:text-white text-[11px] font-semibold transition-colors"
+                    className="text-[11px] font-semibold transition-colors"
+                    style={{ color: c.textMuted }}
                   >
                     Reply
                   </button>
@@ -596,11 +627,8 @@ function CommentSection({
           >
             <Heart
               size={11}
-              className={
-                comment.likedByMe
-                  ? "fill-red-500 text-red-500"
-                  : "text-neutral-500 hover:text-neutral-300 transition-colors"
-              }
+              className={comment.likedByMe ? "fill-red-500 text-red-500" : ""}
+              style={comment.likedByMe ? undefined : { color: c.textFaint }}
             />
           </button>
           <CommentMenu comment={comment} parentId={parentId} />
@@ -621,18 +649,25 @@ function CommentSection({
         {header}
         {loading ? (
           <div className="flex justify-center py-12">
-            <div className="w-6 h-6 rounded-full border-2 border-neutral-800 border-t-neutral-400 animate-spin" />
+            <div
+              className="w-6 h-6 rounded-full border-2 animate-spin"
+              style={{ borderColor: ov(0.08), borderTopColor: c.textMuted }}
+            />
           </div>
         ) : comments.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-2 text-center">
             <div
               className="w-12 h-12 rounded-full flex items-center justify-center mb-1"
-              style={{ background: "rgba(255,255,255,0.04)" }}
+              style={{ background: ov(0.04) }}
             >
-              <MessageCircle size={20} className="text-neutral-600" />
+              <MessageCircle size={20} style={{ color: c.textFaint }} />
             </div>
-            <p className="text-white text-sm font-semibold">No comments yet</p>
-            <p className="text-neutral-600 text-xs">Be the first to comment</p>
+            <p className="text-sm font-semibold" style={{ color: c.text }}>
+              No comments yet
+            </p>
+            <p className="text-xs" style={{ color: c.textFaint }}>
+              Be the first to comment
+            </p>
           </div>
         ) : (
           comments.map((comment) => (
@@ -641,11 +676,12 @@ function CommentSection({
               {(comment.replies?.length ?? 0) > 0 && (
                 <button
                   onClick={() => toggleReplies(comment.id)}
-                  className="ml-10 flex items-center gap-2 text-neutral-500 hover:text-neutral-300 text-xs font-semibold transition-colors w-fit"
+                  className="ml-10 flex items-center gap-2 text-xs font-semibold transition-colors w-fit"
+                  style={{ color: c.textFaint }}
                 >
                   <span
                     className="w-5 h-px inline-block"
-                    style={{ background: "rgba(255,255,255,0.15)" }}
+                    style={{ background: ov(0.15) }}
                   />
                   {expandedReplies.has(comment.id) ? (
                     <>
@@ -672,28 +708,29 @@ function CommentSection({
           ))
         )}
       </div>
-      <div
-        className="shrink-0"
-        style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
-      >
+      <div className="shrink-0" style={{ borderTop: `1px solid ${ov(0.06)}` }}>
         {replyingTo && (
           <div className="flex items-center justify-between px-4 pt-2">
-            <span className="text-neutral-500 text-xs">
+            <span className="text-xs" style={{ color: c.textFaint }}>
               Replying to{" "}
-              <span className="text-white font-semibold">
+              <span className="font-semibold" style={{ color: c.text }}>
                 @{replyingTo.username}
               </span>
             </span>
             <button onClick={() => setReplyingTo(null)}>
               <X
                 size={13}
-                className="text-neutral-500 hover:text-white transition-colors"
+                style={{ color: c.textFaint }}
+                className="hover:opacity-70 transition-colors"
               />
             </button>
           </div>
         )}
         <div className="flex items-center gap-3 px-4 py-3">
-          <button className="text-neutral-500 hover:text-white transition-colors shrink-0">
+          <button
+            className="transition-colors shrink-0"
+            style={{ color: c.textFaint }}
+          >
             <Smile size={20} />
           </button>
           <input
@@ -705,11 +742,10 @@ function CommentSection({
               if (e.key === "Enter") void handlePost();
             }}
             placeholder={
-              replyingTo
-                ? `Reply to @${replyingTo.username}...`
-                : "comment..."
+              replyingTo ? `Reply to @${replyingTo.username}...` : "comment..."
             }
-            className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-neutral-600"
+            className="flex-1 bg-transparent text-sm outline-none"
+            style={{ color: c.text }}
           />
           <button
             onClick={() => void handlePost()}
@@ -737,6 +773,8 @@ function LightboxModal({
   userId,
   onLikeToggle,
   onSaveToggle,
+  c,
+  ov,
 }: {
   posts: PostType[];
   currentIndex: number;
@@ -746,6 +784,8 @@ function LightboxModal({
   userId: string;
   onLikeToggle: (postId: string) => void;
   onSaveToggle: (postId: string) => void;
+  c: ThemeColors;
+  ov: (o: number) => string;
 }) {
   const post = posts[currentIndex];
   const [visible, setVisible] = useState(false);
@@ -862,8 +902,8 @@ function LightboxModal({
           maxWidth: "960px",
           height: "min(88vh, 680px)",
           borderRadius: "16px",
-          background: "#0a0a0a",
-          border: "1px solid rgba(255,255,255,0.07)",
+          background: c.card,
+          border: `1px solid ${ov(0.07)}`,
           boxShadow: "0 32px 80px rgba(0,0,0,0.7)",
           animation: "modalSlideUp 0.35s cubic-bezier(0.34, 1.2, 0.64, 1)",
         }}
@@ -883,12 +923,12 @@ function LightboxModal({
         {/* Comments panel */}
         <div
           className="w-85 shrink-0 flex flex-col"
-          style={{ borderLeft: "1px solid rgba(255,255,255,0.06)" }}
+          style={{ borderLeft: `1px solid ${ov(0.06)}`, background: c.card }}
         >
           {/* Header */}
           <div
             className="flex items-center justify-between px-4 py-3.5 shrink-0"
-            style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+            style={{ borderBottom: `1px solid ${ov(0.06)}` }}
           >
             <Link
               href={`/profile/${post.author?.username}`}
@@ -902,7 +942,10 @@ function LightboxModal({
                     "linear-gradient(135deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)",
                 }}
               >
-                <div className="p-[1.5px] rounded-full bg-[#0a0a0a]">
+                <div
+                  className="p-[1.5px] rounded-full"
+                  style={{ background: c.card }}
+                >
                   <Avatar
                     src={post.author?.avatarUrl}
                     name={post.author?.username}
@@ -911,17 +954,23 @@ function LightboxModal({
                 </div>
               </div>
               <div>
-                <p className="text-white text-[13px] font-semibold leading-tight group-hover:underline">
+                <p
+                  className="text-[13px] font-semibold leading-tight group-hover:underline"
+                  style={{ color: c.text }}
+                >
                   {post.author?.username ?? "User"}
                 </p>
                 {post.createdAt && (
-                  <p className="text-neutral-500 text-[11px]">
+                  <p className="text-[11px]" style={{ color: c.textFaint }}>
                     {getRelativeTime(post.createdAt)}
                   </p>
                 )}
               </div>
             </Link>
-            <button className="text-neutral-500 hover:text-white transition-colors">
+            <button
+              className="transition-colors"
+              style={{ color: c.textFaint }}
+            >
               <MoreHorizontal size={18} />
             </button>
           </div>
@@ -931,11 +980,13 @@ function LightboxModal({
             <CommentSection
               postId={post.id}
               userId={userId}
+              c={c}
+              ov={ov}
               header={
                 post.caption && post.author ? (
                   <div
                     className="flex items-start gap-3 -mx-4 -mt-3 px-4 py-3"
-                    style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}
+                    style={{ borderBottom: `1px solid ${ov(0.04)}` }}
                   >
                     <Avatar
                       src={post.author.avatarUrl}
@@ -943,14 +994,22 @@ function LightboxModal({
                       size={30}
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="text-white text-[13px] leading-snug">
-                        <span className="font-semibold mr-1">
+                      <p className="text-[13px] leading-snug">
+                        <span
+                          className="font-semibold mr-1"
+                          style={{ color: c.text }}
+                        >
                           {post.author.username}
                         </span>
-                        <span className="text-neutral-300">{post.caption}</span>
+                        <span style={{ color: c.textMuted }}>
+                          {post.caption}
+                        </span>
                       </p>
                       {post.createdAt && (
-                        <p className="text-neutral-600 text-[11px] mt-1">
+                        <p
+                          className="text-[11px] mt-1"
+                          style={{ color: c.textFaint }}
+                        >
                           {getRelativeTime(post.createdAt)}
                         </p>
                       )}
@@ -964,7 +1023,7 @@ function LightboxModal({
           {/*Actions*/}
           <div
             className="px-4 py-3 shrink-0"
-            style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+            style={{ borderTop: `1px solid ${ov(0.06)}` }}
           >
             <div className="flex items-center justify-between mb-2.5">
               <div className="flex items-center gap-4">
@@ -980,14 +1039,15 @@ function LightboxModal({
                   <Heart
                     size={22}
                     className={
-                      post.likedByMe
-                        ? "fill-red-500 text-red-500"
-                        : "text-white hover:text-neutral-400 transition-colors"
+                      post.likedByMe ? "fill-red-500 text-red-500" : ""
                     }
-                    style={{ transition: "color 0.15s ease, fill 0.15s ease" }}
+                    style={{
+                      transition: "color 0.15s ease, fill 0.15s ease",
+                      ...(post.likedByMe ? {} : { color: c.text }),
+                    }}
                   />
                 </button>
-                <button className="text-white hover:text-neutral-400 transition-colors">
+                <button className="transition-colors" style={{ color: c.text }}>
                   <MessageCircle size={22} />
                 </button>
                 <button
@@ -998,7 +1058,8 @@ function LightboxModal({
                     setCopied(true);
                     setTimeout(() => setCopied(false), 2000);
                   }}
-                  className="text-white hover:text-neutral-400 transition-colors"
+                  className="transition-colors"
+                  style={{ color: c.text }}
                 >
                   {copied ? (
                     <Check size={20} className="text-green-400" />
@@ -1013,15 +1074,12 @@ function LightboxModal({
               >
                 <Bookmark
                   size={20}
-                  className={
-                    post.savedByMe
-                      ? "fill-white text-white"
-                      : "text-white hover:text-neutral-400 transition-colors"
-                  }
+                  className={post.savedByMe ? "fill-current" : ""}
+                  style={{ color: c.text }}
                 />
               </button>
             </div>
-            <p className="text-white text-[13px] font-semibold">
+            <p className="text-[13px] font-semibold" style={{ color: c.text }}>
               {likesCount.toLocaleString()}{" "}
               {likesCount === 1 ? "like" : "likes"}
             </p>
@@ -1035,6 +1093,13 @@ function LightboxModal({
 export default function ExplorePage() {
   const { user } = useAuth();
   const router = useRouter();
+  const { resolvedTheme } = useTheme();
+  const c = THEME_COLORS[resolvedTheme];
+  const isDark = resolvedTheme === "dark";
+  const ov = useCallback(
+    (o: number) => (isDark ? `rgba(255,255,255,${o})` : `rgba(0,0,0,${o})`),
+    [isDark],
+  );
   const [posts, setPosts] = useState<PostType[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
@@ -1118,7 +1183,7 @@ export default function ExplorePage() {
   );
 
   return (
-    <main className="min-h-screen text-white" style={{ background: "#000" }}>
+    <main className="min-h-screen" style={{ background: c.bg, color: c.text }}>
       <style>{`
         @keyframes tileReveal {
           from { opacity: 0; transform: scale(0.94); }
@@ -1128,17 +1193,17 @@ export default function ExplorePage() {
 
       <div className="mx-auto" style={{ maxWidth: "935px", padding: "0 0px" }}>
         {loading ? (
-          <GridSkeleton />
+          <GridSkeleton c={c} />
         ) : posts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-32 gap-3 text-center">
             <div
               className="w-16 h-16 rounded-full flex items-center justify-center mb-2"
-              style={{ border: "1px solid rgba(255,255,255,0.1)" }}
+              style={{ border: `1px solid ${ov(0.1)}` }}
             >
               <svg
-                className="w-7 h-7 text-neutral-600"
+                className="w-7 h-7"
                 fill="none"
-                stroke="currentColor"
+                stroke={c.textFaint}
                 strokeWidth={1.5}
                 viewBox="0 0 24 24"
               >
@@ -1149,10 +1214,10 @@ export default function ExplorePage() {
                 />
               </svg>
             </div>
-            <p className="text-white text-sm font-semibold">
+            <p className="text-sm font-semibold" style={{ color: c.text }}>
               Nothing to explore yet
             </p>
-            <p className="text-neutral-600 text-xs">
+            <p className="text-xs" style={{ color: c.textFaint }}>
               Posts will appear here once shared
             </p>
           </div>
@@ -1182,6 +1247,8 @@ export default function ExplorePage() {
           userId={userId}
           onLikeToggle={(id) => void handleLikeToggle(id)}
           onSaveToggle={(id) => void handleSaveToggle(id)}
+          c={c}
+          ov={ov}
         />
       )}
     </main>

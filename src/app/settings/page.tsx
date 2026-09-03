@@ -5,6 +5,12 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
+  useTheme,
+  THEME_COLORS,
+  type Theme,
+  type FontSize,
+} from "@/context/ThemeContext";
+import {
   User,
   Lock,
   Bell,
@@ -64,23 +70,8 @@ interface NotifForm {
   emailDigest: boolean;
   pushEnabled: boolean;
 }
-type Theme = "dark" | "light" | "system";
-type FontSize = "sm" | "md" | "lg";
 
-interface AppearanceForm {
-  theme: Theme;
-  language: string;
-  fontSize: FontSize;
-}
-
-type ThemeColors = {
-  bg: string;
-  card: string;
-  border: string;
-  text: string;
-  sub: string;
-  input: string;
-};
+type ThemeColors = (typeof THEME_COLORS)[keyof typeof THEME_COLORS];
 
 const PRONOUNS = [
   "Prefer not to say",
@@ -101,33 +92,15 @@ const LANGUAGES = [
   "Portuguese",
 ];
 
-const THEME_COLORS: Record<Theme, ThemeColors> = {
-  dark: {
-    bg: "#000",
-    card: "#0d0d0d",
-    border: "#1f1f1f",
-    text: "#fff",
-    sub: "#666",
-    input: "#1a1a1a",
-  },
-  light: {
-    bg: "#f5f5f5",
-    card: "#fff",
-    border: "#e5e5e5",
-    text: "#111",
-    sub: "#888",
-    input: "#f0f0f0",
-  },
-  system: {
-    bg: "#000",
-    card: "#0d0d0d",
-    border: "#1f1f1f",
-    text: "#fff",
-    sub: "#666",
-    input: "#1a1a1a",
-  },
-};
-
+/* Shared container classes for every top-level <main>.
+   - No horizontal margin/cap below `sm`, so inner elements (which already
+     carry their own px-4 / mx-4 insets) fill the screen naturally on phones.
+   - A moderate cap from `sm` up avoids the "too much empty margin" look on
+     tablets / split-screen widths.
+   - A slightly wider cap from `lg` up avoids the column looking like a thin
+     stripe on large desktop monitors, without ever going full-bleed. */
+const PAGE_WIDTH =
+  "w-full sm:max-w-lg sm:mx-auto lg:max-w-2xl min-h-screen pb-24";
 
 function Toggle({
   on,
@@ -166,18 +139,21 @@ function Row({
   right: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between px-4 py-4">
-      <div className="flex-1 pr-4">
-        <p style={{ color: c.text }} className="text-[15px]">
+    <div className="flex items-center justify-between px-4 py-4 gap-3">
+      <div className="flex-1 min-w-0 pr-2">
+        <p style={{ color: c.text }} className="text-[15px] wrap-break-word">
           {label}
         </p>
         {sub && (
-          <p style={{ color: c.sub }} className="text-[12px] mt-0.5">
+          <p
+            style={{ color: c.textMuted }}
+            className="text-[12px] mt-0.5 wrap-break-word"
+          >
             {sub}
           </p>
         )}
       </div>
-      {right}
+      <div className="shrink-0">{right}</div>
     </div>
   );
 }
@@ -204,7 +180,7 @@ function Field({
   return (
     <div className="px-4 py-3">
       <label
-        style={{ color: c.sub }}
+        style={{ color: c.textMuted }}
         className="block text-[11px] uppercase tracking-widest mb-1.5"
       >
         {label}
@@ -232,7 +208,7 @@ function Field({
       )}
       {maxLength && (
         <p
-          style={{ color: c.sub }}
+          style={{ color: c.textMuted }}
           className="text-[11px] text-right mt-1 opacity-50"
         >
           {value.length}/{maxLength}
@@ -256,7 +232,7 @@ function Card({ c, children }: { c: ThemeColors; children: React.ReactNode }) {
 function SectionLabel({ c, text }: { c: ThemeColors; text: string }) {
   return (
     <p
-      style={{ color: c.sub }}
+      style={{ color: c.textMuted }}
       className="px-4 pt-5 pb-2 text-[11px] font-semibold uppercase tracking-widest"
     >
       {text}
@@ -314,25 +290,28 @@ function SectionTopBar({
 }) {
   return (
     <div
-      style={{ background: c.bg, borderBottom: `1px solid ${c.border}` }}
-      className="sticky top-0 z-40 flex items-center justify-between px-4 py-3"
+      style={{ background: c.bg }}
+      className="sticky top-0 z-40 flex items-center justify-between px-4 py-3 gap-2"
     >
-      <button onClick={onBack} className="p-1">
+      <button onClick={onBack} className="p-1 shrink-0">
         <ChevronLeft size={24} style={{ color: c.text }} />
       </button>
-      <h1 style={{ color: c.text }} className="text-[17px] font-semibold">
+      <h1
+        style={{ color: c.text }}
+        className="text-[17px] font-semibold truncate text-center flex-1"
+      >
         {title}
       </h1>
       {onSave ? (
         <button
           onClick={onSave}
           disabled={saving}
-          className="text-[#0095f6] text-[15px] font-semibold disabled:opacity-40"
+          className="text-[#0095f6] text-[15px] font-semibold disabled:opacity-40 shrink-0"
         >
           {saving ? "…" : saveMsg === "success" ? "✓" : "Save"}
         </button>
       ) : (
-        <div className="w-10" />
+        <div className="w-10 shrink-0" />
       )}
     </div>
   );
@@ -384,11 +363,15 @@ export default function SettingsPage() {
   });
 
   /* Appearance state */
-  const [appearance, setAppearance] = useState<AppearanceForm>({
-    theme: "dark",
-    language: "English",
-    fontSize: "md",
-  });
+  const {
+    theme,
+    fontSize,
+    language,
+    resolvedTheme,
+    setTheme,
+    setFontSize,
+    setLanguage,
+  } = useTheme();
 
   /* Password state  */
   const [passwords, setPasswords] = useState({
@@ -398,7 +381,7 @@ export default function SettingsPage() {
   });
   const [showPw, setShowPw] = useState(false);
 
-  const c = THEME_COLORS[appearance.theme];
+  const c = THEME_COLORS[resolvedTheme];
 
   // Load profile
   useEffect(() => {
@@ -492,9 +475,20 @@ export default function SettingsPage() {
     }
   };
 
+  const [pwError, setPwError] = useState<string | null>(null);
+
   const savePassword = async () => {
+    setPwError(null);
+    if (!passwords.current || !passwords.next) {
+      setPwError("Enter your current and new password");
+      return;
+    }
+    if (passwords.next.length < 6) {
+      setPwError("New password must be at least 6 characters");
+      return;
+    }
     if (passwords.next !== passwords.confirm) {
-      flash("error");
+      setPwError("Passwords do not match");
       return;
     }
     setSaving(true);
@@ -504,18 +498,34 @@ export default function SettingsPage() {
         EmailAuthProvider,
         reauthenticateWithCredential,
       } = await import("firebase/auth");
-      if (!user || !user.email) throw new Error();
-
+      if (!user || !user.email) throw new Error("No authenticated user");
       const credential = EmailAuthProvider.credential(
         user.email,
         passwords.current,
       );
       await reauthenticateWithCredential(user, credential);
       await updatePassword(user, passwords.next);
-
       flash("success");
       setPasswords({ current: "", next: "", confirm: "" });
-    } catch {
+    } catch (err: unknown) {
+      const code =
+        typeof err === "object" && err !== null && "code" in err
+          ? (err as { code?: string }).code
+          : undefined;
+      if (
+        code === "auth/wrong-password" ||
+        code === "auth/invalid-credential"
+      ) {
+        setPwError("Current password is incorrect");
+      } else if (code === "auth/weak-password") {
+        setPwError("New password is too weak");
+      } else if (code === "auth/too-many-requests") {
+        setPwError("Too many attempts — try again later");
+      } else if (code === "auth/requires-recent-login") {
+        setPwError("Please log out and back in, then retry");
+      } else {
+        setPwError("Something went wrong. Try again");
+      }
       flash("error");
     } finally {
       setSaving(false);
@@ -531,8 +541,14 @@ export default function SettingsPage() {
 
   if (loading)
     return (
-      <main className="min-h-screen flex items-center justify-center bg-black">
-        <div className="w-7 h-7 border-2 border-neutral-800 border-t-white rounded-full animate-spin" />
+      <main
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: c.bg }}
+      >
+        <div
+          className="w-7 h-7 rounded-full animate-spin"
+          style={{ border: `2px solid ${c.border}`, borderTopColor: c.text }}
+        />
       </main>
     );
 
@@ -577,12 +593,9 @@ export default function SettingsPage() {
     ];
 
     return (
-      <main
-        style={{ background: c.bg }}
-        className="max-w-md mx-auto min-h-screen pb-24"
-      >
+      <main style={{ background: c.bg }} className={PAGE_WIDTH}>
         <div
-          style={{ background: c.bg, borderBottom: `1px solid ${c.border}` }}
+          style={{ background: c.bg }}
           className="sticky top-0 z-40 flex items-center justify-between px-4 py-3"
         >
           <button onClick={() => router.back()} className="p-1">
@@ -594,32 +607,38 @@ export default function SettingsPage() {
           <div className="w-8" />
         </div>
 
-        <div className="flex flex-col items-center pt-8 pb-6">
+        <div className="flex flex-col items-center pt-8 pb-6 px-4 text-center">
           <div
             style={{ border: `2px solid ${c.border}` }}
-            className="w-20 h-20 rounded-full overflow-hidden mb-3"
+            className="w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden mb-3 shrink-0"
           >
             {avatarPreview ? (
               <Image
                 src={avatarPreview}
                 alt="avatar"
-                width={80}
-                height={80}
+                width={96}
+                height={96}
                 className="object-cover w-full h-full"
               />
             ) : (
               <div
-                style={{ background: c.input, color: c.text }}
+                style={{ background: c.cardMuted, color: c.text }}
                 className="w-full h-full flex items-center justify-center text-3xl font-light"
               >
                 {profile.username[0]?.toUpperCase()}
               </div>
             )}
           </div>
-          <p style={{ color: c.text }} className="text-[16px] font-semibold">
+          <p
+            style={{ color: c.text }}
+            className="text-[16px] font-semibold wrap-break-word max-w-full"
+          >
             {profile.fullName || profile.username}
           </p>
-          <p style={{ color: c.sub }} className="text-[13px] mt-0.5">
+          <p
+            style={{ color: c.textMuted }}
+            className="text-[13px] mt-0.5 wrap-break-word max-w-full"
+          >
             @{profile.username}
           </p>
         </div>
@@ -633,23 +652,30 @@ export default function SettingsPage() {
                 className="w-full flex items-center gap-4 px-4 py-4 active:opacity-60 transition-opacity"
               >
                 <div
-                  style={{ background: c.input, color: c.sub }}
+                  style={{ background: c.cardMuted, color: c.text }}
                   className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
                 >
                   {item.icon}
                 </div>
-                <div className="flex-1 text-left">
+                <div className="flex-1 min-w-0 text-left">
                   <p
                     style={{ color: c.text }}
-                    className="text-[15px] font-medium"
+                    className="text-[15px] font-medium truncate"
                   >
                     {item.label}
                   </p>
-                  <p style={{ color: c.sub }} className="text-[12px] mt-0.5">
+                  <p
+                    style={{ color: c.textMuted }}
+                    className="text-[12px] mt-0.5 truncate"
+                  >
                     {item.sub}
                   </p>
                 </div>
-                <ChevronRight size={16} style={{ color: c.border }} />
+                <ChevronRight
+                  size={16}
+                  style={{ color: c.textMuted }}
+                  className="shrink-0"
+                />
               </button>
               {i < items.length - 1 && <Divider c={c} />}
             </div>
@@ -663,10 +689,10 @@ export default function SettingsPage() {
             className="w-full flex items-center gap-4 px-4 py-4 active:opacity-60 transition-opacity"
           >
             <div
-              style={{ background: c.input }}
+              style={{ background: c.cardMuted }}
               className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
             >
-              <LogOut size={18} style={{ color: c.sub }} />
+              <LogOut size={18} style={{ color: c.textMuted }} />
             </div>
             <p style={{ color: c.text }} className="text-[15px] font-medium">
               Log out
@@ -675,7 +701,7 @@ export default function SettingsPage() {
           <Divider c={c} />
           <button className="w-full flex items-center gap-4 px-4 py-4 active:opacity-60 transition-opacity">
             <div
-              style={{ background: c.input }}
+              style={{ background: c.cardMuted }}
               className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
             >
               <Trash2 size={18} className="text-[#ed4956]" />
@@ -691,10 +717,7 @@ export default function SettingsPage() {
 
   if (section === "account")
     return (
-      <main
-        style={{ background: c.bg }}
-        className="max-w-md mx-auto min-h-screen pb-24"
-      >
+      <main style={{ background: c.bg }} className={PAGE_WIDTH}>
         <SectionTopBar
           c={c}
           title="Account"
@@ -707,17 +730,22 @@ export default function SettingsPage() {
         {/* Avatar */}
         <div
           style={{ borderBottom: `1px solid ${c.border}` }}
-          className="flex flex-col items-center py-6"
+          className="flex flex-col items-center py-6 px-4"
         >
           <div
-            className="relative w-24 h-24 rounded-full overflow-hidden cursor-pointer"
+            className="relative w-24 h-24 rounded-full overflow-hidden cursor-pointer shrink-0"
             onClick={() => fileInputRef.current?.click()}
           >
             {avatarPreview ? (
-              <Image src={avatarPreview} alt="avatar" fill className="object-cover" />
+              <Image
+                src={avatarPreview}
+                alt="avatar"
+                fill
+                className="object-cover"
+              />
             ) : (
               <div
-                style={{ background: c.input, color: c.text }}
+                style={{ background: c.cardMuted, color: c.text }}
                 className="w-full h-full flex items-center justify-center text-4xl font-light"
               >
                 {profile.username[0]?.toUpperCase()}
@@ -785,7 +813,7 @@ export default function SettingsPage() {
           <Divider c={c} />
           <div className="px-4 py-3">
             <label
-              style={{ color: c.sub }}
+              style={{ color: c.textMuted }}
               className="block text-[11px] uppercase tracking-widest mb-1.5"
             >
               Pronouns
@@ -808,7 +836,7 @@ export default function SettingsPage() {
           <Divider c={c} />
           <div className="px-4 py-3">
             <label
-              style={{ color: c.sub }}
+              style={{ color: c.textMuted }}
               className="block text-[11px] uppercase tracking-widest mb-1.5"
             >
               Gender
@@ -858,7 +886,7 @@ export default function SettingsPage() {
               <div className="flex items-center gap-3 px-4 py-3">
                 <LinkIcon
                   size={15}
-                  style={{ color: c.sub }}
+                  style={{ color: c.textMuted }}
                   className="shrink-0"
                 />
                 <div className="flex-1 min-w-0">
@@ -881,7 +909,7 @@ export default function SettingsPage() {
                       links: p.links.filter((_, idx) => idx !== i),
                     }))
                   }
-                  className="p-1.5"
+                  className="p-1.5 shrink-0"
                 >
                   <X size={15} className="text-[#ed4956]" />
                 </button>
@@ -900,7 +928,7 @@ export default function SettingsPage() {
                 placeholder="https://"
                 autoFocus
                 style={{
-                  background: c.input,
+                  background: c.cardMuted,
                   color: c.text,
                   border: `1px solid ${c.border}`,
                 }}
@@ -914,13 +942,13 @@ export default function SettingsPage() {
                 }
                 placeholder="Title (optional)"
                 style={{
-                  background: c.input,
+                  background: c.cardMuted,
                   color: c.text,
                   border: `1px solid ${c.border}`,
                 }}
                 className="w-full rounded-xl px-3 py-2.5 text-[14px] outline-none placeholder:opacity-30"
               />
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <button
                   onClick={() => {
                     if (newLink.url) {
@@ -932,14 +960,14 @@ export default function SettingsPage() {
                     }
                     setShowAddLink(false);
                   }}
-                  className="flex-1 bg-[#0095f6] text-white text-[14px] font-semibold py-2.5 rounded-xl"
+                  className="flex-1 min-w-25 bg-[#0095f6] text-white text-[14px] font-semibold py-2.5 rounded-xl"
                 >
                   Add
                 </button>
                 <button
                   onClick={() => setShowAddLink(false)}
-                  style={{ background: c.input, color: c.text }}
-                  className="flex-1 text-[14px] font-semibold py-2.5 rounded-xl"
+                  style={{ background: c.cardMuted, color: c.text }}
+                  className="flex-1 min-w-25 text-[14px] font-semibold py-2.5 rounded-xl"
                 >
                   Cancel
                 </button>
@@ -950,7 +978,7 @@ export default function SettingsPage() {
               onClick={() => setShowAddLink(true)}
               className="w-full flex items-center gap-3 px-4 py-3.5 active:opacity-60 transition-opacity"
             >
-              <Plus size={17} className="text-[#0095f6]" />
+              <Plus size={17} className="text-[#0095f6] shrink-0" />
               <span className="text-[15px] text-[#0095f6] font-semibold">
                 Add link
               </span>
@@ -961,17 +989,14 @@ export default function SettingsPage() {
           c={c}
           saving={saving}
           saveMsg={saveMsg}
-          onPress={saveProfile}
+          onPress={() => flash("success")}
         />
       </main>
     );
 
   if (section === "privacy")
     return (
-      <main
-        style={{ background: c.bg }}
-        className="max-w-md mx-auto min-h-screen pb-24"
-      >
+      <main style={{ background: c.bg }} className={PAGE_WIDTH}>
         <SectionTopBar
           c={c}
           title="Privacy"
@@ -1040,7 +1065,7 @@ export default function SettingsPage() {
         <Card c={c}>
           <div className="px-4 py-3">
             <p
-              style={{ color: c.sub }}
+              style={{ color: c.textMuted }}
               className="text-[12px] uppercase tracking-widest mb-3"
             >
               Who can DM you
@@ -1052,7 +1077,9 @@ export default function SettingsPage() {
                   className="w-full flex items-center justify-between py-3"
                 >
                   <span style={{ color: c.text }} className="text-[15px]">
-                    {opt === "none" ? "No one" : opt[0].toUpperCase() + opt.slice(1)}
+                    {opt === "none"
+                      ? "No one"
+                      : opt[0].toUpperCase() + opt.slice(1)}
                   </span>
                   {privacy.allowDMs === opt && (
                     <Check size={16} className="text-[#0095f6]" />
@@ -1099,10 +1126,7 @@ export default function SettingsPage() {
       },
     ];
     return (
-      <main
-        style={{ background: c.bg }}
-        className="max-w-md mx-auto min-h-screen pb-24"
-      >
+      <main style={{ background: c.bg }} className={PAGE_WIDTH}>
         <SectionTopBar
           c={c}
           title="Notifications"
@@ -1165,10 +1189,7 @@ export default function SettingsPage() {
       { id: "lg", label: "Large" },
     ];
     return (
-      <main
-        style={{ background: c.bg }}
-        className="max-w-md mx-auto min-h-screen pb-24"
-      >
+      <main style={{ background: c.bg }} className={PAGE_WIDTH}>
         <SectionTopBar
           c={c}
           title="Appearance"
@@ -1178,28 +1199,28 @@ export default function SettingsPage() {
         />
         <SectionLabel c={c} text="Theme" />
         <Card c={c}>
-          <div className="p-4 flex gap-3">
+          <div className="p-4 flex flex-wrap gap-3">
             {themes.map((t) => (
               <button
                 key={t.id}
-                onClick={() => setAppearance((p) => ({ ...p, theme: t.id }))}
+                onClick={() => setTheme(t.id)}
                 style={{
-                  border: `1px solid ${appearance.theme === t.id ? "#0095f6" : c.border}`,
+                  border: `1px solid ${theme === t.id ? "#0095f6" : c.border}`,
                   background:
-                    appearance.theme === t.id ? "rgba(0,149,246,0.1)" : c.input,
+                    theme === t.id ? "rgba(0,149,246,0.1)" : c.cardMuted,
                 }}
-                className="flex-1 flex flex-col items-center gap-2 py-4 rounded-xl transition-all"
+                className="flex-1 min-w-20 flex flex-col items-center gap-2 py-4 rounded-xl transition-all"
               >
                 <span
                   style={{
-                    color: appearance.theme === t.id ? "#0095f6" : c.sub,
+                    color: theme === t.id ? "#0095f6" : c.textMuted,
                   }}
                 >
                   {t.icon}
                 </span>
                 <span
                   style={{
-                    color: appearance.theme === t.id ? "#0095f6" : c.sub,
+                    color: theme === t.id ? "#0095f6" : c.textMuted,
                   }}
                   className="text-[13px] font-medium"
                 >
@@ -1212,20 +1233,18 @@ export default function SettingsPage() {
 
         <SectionLabel c={c} text="Font size" />
         <Card c={c}>
-          <div className="p-4 flex gap-3">
+          <div className="p-4 flex flex-wrap gap-3">
             {fontSizes.map((f) => (
               <button
                 key={f.id}
-                onClick={() => setAppearance((p) => ({ ...p, fontSize: f.id }))}
+                onClick={() => setFontSize(f.id)}
                 style={{
-                  border: `1px solid ${appearance.fontSize === f.id ? "#0095f6" : c.border}`,
+                  border: `1px solid ${fontSize === f.id ? "#0095f6" : c.border}`,
                   background:
-                    appearance.fontSize === f.id
-                      ? "rgba(0,149,246,0.1)"
-                      : c.input,
-                  color: appearance.fontSize === f.id ? "#0095f6" : c.sub,
+                    fontSize === f.id ? "rgba(0,149,246,0.1)" : c.cardMuted,
+                  color: fontSize === f.id ? "#0095f6" : c.textMuted,
                 }}
-                className="flex-1 py-3 rounded-xl text-[14px] font-medium transition-all"
+                className="flex-1 min-w-20 py-3 rounded-xl text-[14px] font-medium transition-all"
               >
                 {f.label}
               </button>
@@ -1237,10 +1256,8 @@ export default function SettingsPage() {
         <Card c={c}>
           <div className="px-4 py-3">
             <select
-              value={appearance.language}
-              onChange={(e) =>
-                setAppearance((p) => ({ ...p, language: e.target.value }))
-              }
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
               style={{ color: c.text, background: "transparent" }}
               className="w-full text-[15px] outline-none"
             >
@@ -1264,10 +1281,7 @@ export default function SettingsPage() {
 
   if (section === "security")
     return (
-      <main
-        style={{ background: c.bg }}
-        className="max-w-md mx-auto min-h-screen pb-24"
-      >
+      <main style={{ background: c.bg }} className={PAGE_WIDTH}>
         <SectionTopBar
           c={c}
           title="Security"
@@ -1287,7 +1301,7 @@ export default function SettingsPage() {
             <div key={f.key}>
               <div className="px-4 py-3">
                 <label
-                  style={{ color: c.sub }}
+                  style={{ color: c.textMuted }}
                   className="block text-[11px] uppercase tracking-widest mb-1.5"
                 >
                   {f.label}
@@ -1301,12 +1315,13 @@ export default function SettingsPage() {
                     }
                     placeholder="••••••••"
                     style={{ color: c.text, background: "transparent" }}
-                    className="flex-1 text-[15px] outline-none placeholder:opacity-30"
+                    className="flex-1 min-w-0 text-[15px] outline-none placeholder:opacity-30"
                   />
                   {f.key === "current" && (
                     <button
                       onClick={() => setShowPw((s) => !s)}
-                      style={{ color: c.sub }}
+                      style={{ color: c.textMuted }}
+                      className="shrink-0"
                     >
                       {showPw ? <EyeOff size={17} /> : <Eye size={17} />}
                     </button>
@@ -1318,9 +1333,10 @@ export default function SettingsPage() {
           ))}
           {passwords.next &&
             passwords.confirm &&
-            passwords.next !== passwords.confirm && (
-              <p className="px-4 pb-3 text-[#ed4956] text-[12px]">
-                Passwords do not match
+            passwords.next !== passwords.confirm &&
+            pwError && (
+              <p className="px-4 pb-3 text-[#ed4956] text-[12px] wrap-break-word">
+                {pwError}
               </p>
             )}
         </Card>
@@ -1331,7 +1347,7 @@ export default function SettingsPage() {
             c={c}
             label="Active sessions"
             sub="This device · Last active now"
-            right={<Globe size={16} style={{ color: c.sub }} />}
+            right={<Globe size={16} style={{ color: c.textMuted }} />}
           />
           <Divider c={c} />
           <button className="w-full px-4 py-4 text-left active:opacity-60 transition-opacity">

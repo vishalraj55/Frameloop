@@ -2,6 +2,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useTheme, THEME_COLORS } from "@/context/ThemeContext";
 import { useRouter } from "next/navigation";
 import { ImagePlus, ChevronLeft } from "lucide-react";
 
@@ -35,6 +36,8 @@ interface CropState {
 export default function UploadPage() {
   const { user } = useAuth();
   const router = useRouter();
+  const { resolvedTheme } = useTheme();
+  const c = THEME_COLORS[resolvedTheme];
 
   const frameRef = useRef<HTMLDivElement>(null);
 
@@ -243,12 +246,27 @@ export default function UploadPage() {
 
   if (step === "select") {
     return (
-      <main className="mx-auto max-w-160 w-full bg-black min-h-screen text-white">
-        <div className=" flex items-center justify-between px-4 py-3 border-b border-neutral-900">
+      <main
+        className="mx-auto max-w-160 w-full max-h-screen"
+        style={{ background: c.bg, color: c.text }}
+      >
+        <div
+          className="flex items-center justify-between px-4 py-3 border-b"
+          style={{ borderColor: c.border }}
+        >
           <span className="text-[15px] font-semibold">New Post</span>
         </div>
         <div className="px-4 py-8">
-          <label className="flex flex-col items-center justify-center border border-neutral-800 rounded-2xl h-80 cursor-pointer hover:bg-neutral-900 transition-colors">
+          <label
+            className="flex flex-col items-center justify-center border rounded-2xl h-80 cursor-pointer transition-colors"
+            style={{ borderColor: c.border }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.background = c.cardMuted)
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.background = "transparent")
+            }
+          >
             <input
               type="file"
               accept="image/*"
@@ -256,11 +274,14 @@ export default function UploadPage() {
               className="hidden"
             />
             <div className="flex flex-col items-center gap-3">
-              <div className="w-16 h-16 rounded-full bg-neutral-800 flex items-center justify-center">
-                <ImagePlus size={26} className="text-neutral-300" />
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center"
+                style={{ background: c.cardMuted }}
+              >
+                <ImagePlus size={26} style={{ color: c.textMuted }} />
               </div>
               <span className="text-[15px] font-semibold">Select a photo</span>
-              <span className="text-sm text-neutral-500">
+              <span className="text-sm" style={{ color: c.textFaint }}>
                 Tap to browse your gallery
               </span>
             </div>
@@ -272,8 +293,14 @@ export default function UploadPage() {
 
   if (step === "edit") {
     return (
-      <main className=" mx-auto max-w-160 bg-black min-h-screen text-white">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-900">
+      <main
+        className="mx-auto max-w-160 min-h-screen"
+        style={{ background: c.bg, color: c.text }}
+      >
+        <div
+          className="flex items-center justify-between px-4 py-3 border-b"
+          style={{ borderColor: c.border }}
+        >
           <button onClick={handleBack}>
             <ChevronLeft size={24} />
           </button>
@@ -290,7 +317,12 @@ export default function UploadPage() {
         <div
           ref={frameRef}
           className="relative w-full overflow-hidden select-none"
-          style={{ aspectRatio: "1/1", cursor: "grab", touchAction: "none" }}
+          style={{
+            aspectRatio: "1/1",
+            cursor: "grab",
+            touchAction: "none",
+            background: c.bg,
+          }}
           onMouseDown={onMouseDown}
           onMouseMove={onMouseMove}
           onMouseUp={onMouseUp}
@@ -326,7 +358,10 @@ export default function UploadPage() {
 
         {/* Filters */}
         <div className="px-4 pt-4 pb-6">
-          <p className="text-xs text-neutral-500 uppercase tracking-widest mb-3">
+          <p
+            className="text-xs uppercase tracking-widest mb-3"
+            style={{ color: c.textFaint }}
+          >
             Filter
           </p>
           <div className="flex gap-3 overflow-x-auto pb-1">
@@ -337,11 +372,12 @@ export default function UploadPage() {
                 className="flex flex-col items-center gap-1.5 shrink-0"
               >
                 <div
-                  className={`relative w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${
-                    selectedFilter === f
-                      ? "border-white scale-105"
-                      : "border-transparent opacity-60"
-                  }`}
+                  className="relative w-16 h-16 rounded-xl overflow-hidden border-2 transition-all"
+                  style={{
+                    borderColor: selectedFilter === f ? c.text : "transparent",
+                    transform: selectedFilter === f ? "scale(1.05)" : undefined,
+                    opacity: selectedFilter === f ? 1 : 0.6,
+                  }}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -351,7 +387,10 @@ export default function UploadPage() {
                     style={{ filter: filters[f] }}
                   />
                 </div>
-                <span className="text-[11px] capitalize text-neutral-400">
+                <span
+                  className="text-[11px] capitalize"
+                  style={{ color: c.textMuted }}
+                >
                   {f}
                 </span>
               </button>
@@ -364,7 +403,10 @@ export default function UploadPage() {
 
   if (posting) {
     return (
-      <main className="bg-black min-h-screen text-white flex flex-col items-center justify-center gap-6 px-8">
+      <main
+        className="min-h-screen flex flex-col items-center justify-center gap-6 px-8"
+        style={{ background: c.bg, color: c.text }}
+      >
         <div className="relative w-20 h-20 rounded-xl overflow-hidden">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -375,14 +417,20 @@ export default function UploadPage() {
           />
         </div>
         <div className="w-full max-w-xs">
-          <div className="flex justify-between text-xs text-neutral-400 mb-2">
+          <div
+            className="flex justify-between text-xs mb-2"
+            style={{ color: c.textMuted }}
+          >
             <span>Uploading...</span>
             <span>{progress}%</span>
           </div>
-          <div className="w-full h-1 bg-neutral-800 rounded-full overflow-hidden">
+          <div
+            className="w-full h-1 rounded-full overflow-hidden"
+            style={{ background: c.cardMuted }}
+          >
             <div
-              className="h-full bg-white rounded-full transition-all duration-300"
-              style={{ width: `${progress}%` }}
+              className="h-full rounded-full transition-all duration-300"
+              style={{ width: `${progress}%`, background: c.text }}
             />
           </div>
         </div>
@@ -391,8 +439,14 @@ export default function UploadPage() {
   }
 
   return (
-    <main className="bg-black min-h-screen text-white">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-900">
+    <main
+      className="min-h-screen max-w-120 mx-auto w-full"
+      style={{ background: c.bg, color: c.text }}
+    >
+      <div
+        className="flex items-center justify-between px-4 py-3 border-b"
+        style={{ borderColor: c.border }}
+      >
         <button onClick={handleBack}>
           <ChevronLeft size={24} />
         </button>
@@ -406,7 +460,10 @@ export default function UploadPage() {
         </button>
       </div>
 
-      <div className="flex items-start gap-3 px-4 py-4 border-b border-neutral-900">
+      <div
+        className="flex items-start gap-3 px-4 py-4 border-b"
+        style={{ borderColor: c.border }}
+      >
         <div className="relative w-16 h-16 rounded-xl overflow-hidden shrink-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -424,14 +481,17 @@ export default function UploadPage() {
           value={caption}
           onChange={(e) => setCaption(e.target.value)}
           placeholder="Write a caption..."
-          className="flex-1 bg-transparent text-sm text-white placeholder:text-neutral-600 resize-none outline-none pt-1"
+          className="flex-1 bg-transparent text-sm resize-none outline-none pt-1 placeholder:opacity-40"
+          style={{ color: c.text }}
           rows={4}
           maxLength={2200}
           autoFocus
         />
       </div>
       <div className="px-4 py-3 flex justify-end">
-        <span className="text-xs text-neutral-600">{caption.length}/2200</span>
+        <span className="text-xs" style={{ color: c.textFaint }}>
+          {caption.length}/2200
+        </span>
       </div>
     </main>
   );

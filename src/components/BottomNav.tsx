@@ -14,16 +14,24 @@ import {
   Settings,
   LogOut,
 } from "lucide-react";
+import { useTheme, THEME_COLORS } from "@/context/ThemeContext";
+
+function hexToRgba(hex: string, alpha: number) {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 export default function NavBar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, username, avatarUrl, loading, logout } = useAuth();
+  const { resolvedTheme } = useTheme();
+  const c = THEME_COLORS[resolvedTheme];
 
   const isOwnProfile = !!username && pathname === `/profile/${username}`;
-
-  const active = (path: string) =>
-    pathname === path ? "text-white" : "text-neutral-400 hover:text-white";
 
   const handleSignOut = async () => {
     await logout();
@@ -75,12 +83,17 @@ export default function NavBar() {
       {/* Mobile bottom nav */}
       <nav className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 md:hidden">
         <div
-          className="relative flex items-center justify-around gap-2 px-3 h-18 rounded-full backdrop-blur-xl shadow-2xl min-w-[320px]"
+          className="relative flex items-center justify-around gap-2 px-3 h-18 rounded-full backdrop-blur-2xl shadow-2xl min-w-[320px]"
           style={{
-            background: "rgba(255, 255, 255, 0.08)",
-            border: "1px solid rgba(255, 255, 255, 0.15)",
+            background: hexToRgba(
+              c.card,
+              resolvedTheme === "dark" ? 0.45 : 0.6,
+            ),
+           // border: `1px solid ${hexToRgba(c.text, resolvedTheme === "dark" ? 0.08 : 0.06)}`,
             boxShadow:
-              "0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)",
+              resolvedTheme === "dark"
+                ? "0 8px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)"
+                : "0 8px 32px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.5)",
           }}
         >
           {/* Sliding pill */}
@@ -88,13 +101,19 @@ export default function NavBar() {
             className="absolute pointer-events-none rounded-full"
             style={{
               left: pillStyle.left,
-              width: "66px",
-              height: "44px",
+              width: "70px",
+              height: "50px",
               top: "50%",
               opacity: pillStyle.opacity,
-              background: "rgba(255, 255, 255, 0.08)",
-              border: "1px solid rgba(255, 255, 255, 0.12)",
-              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.1)",
+              background: hexToRgba(
+                c.text,
+                resolvedTheme === "dark" ? 0.12 : 0.08,
+              ),
+             // border: `1px solid ${hexToRgba(c.text, resolvedTheme === "dark" ? 0.1 : 0.08)}`,
+              boxShadow:
+                resolvedTheme === "dark"
+                  ? "inset 0 1px 0 rgba(255,255,255,0.08)"
+                  : "inset 0 1px 0 rgba(255,255,255,0.6)",
               borderRadius: "9999px",
               transform: "translate3d(0, -50%, 0)",
               transition:
@@ -108,28 +127,32 @@ export default function NavBar() {
           <Link
             ref={setRef(0)}
             href="/feed"
-            className={`relative z-10 ${active("/feed")}`}
+            className="relative z-10 transition-colors"
+            style={{ color: pathname === "/feed" ? c.text : c.text }}
           >
             <Home size={24} strokeWidth={1.6} />
           </Link>
           <Link
             ref={setRef(1)}
             href="/search"
-            className={`relative z-10 ${active("/search")}`}
+            className="relative z-10 transition-colors"
+            style={{ color: pathname === "/search" ? c.text : c.text }}
           >
             <Search size={24} strokeWidth={1.6} />
           </Link>
           <Link
             ref={setRef(2)}
             href="/upload"
-            className={`relative z-10 ${active("/upload")}`}
+            className="relative z-10 transition-colors"
+            style={{ color: pathname === "/upload" ? c.text : c.text }}
           >
             <Upload size={24} strokeWidth={1.6} />
           </Link>
           <Link
             ref={setRef(3)}
             href="/explore"
-            className={`relative z-10 ${active("/explore")}`}
+            className="relative z-10 transition-colors"
+            style={{ color: pathname === "/explore" ? c.text : c.text }}
           >
             <Compass size={24} strokeWidth={1.6} />
           </Link>
@@ -139,7 +162,8 @@ export default function NavBar() {
             <Link
               ref={setRef(4)}
               href={profilePath}
-              className={`relative z-10 ${active(profilePath)}`}
+              className="relative z-10 transition-colors"
+              style={{ color: pathname === profilePath ? c.text : c.text }}
             >
               {avatarUrl ? (
                 <Image
@@ -157,7 +181,8 @@ export default function NavBar() {
             <Link
               ref={setRef(4)}
               href="/login"
-              className={`relative z-10 ${active("/login")}`}
+              className="relative z-10 transition-colors"
+              style={{ color: pathname === "/login" ? c.text : c.textMuted }}
             >
               <UserIcon size={24} strokeWidth={1.6} />
             </Link>
@@ -166,24 +191,48 @@ export default function NavBar() {
       </nav>
 
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex fixed top-0 left-0 h-screen z-40 bg-black border-r border-black flex-col py-8">
+      <aside
+        style={{
+          background: c.bg,
+          borderRight: `0px solid ${c.border}`,
+        }}
+        className="hidden md:flex fixed top-0 left-0 h-screen z-40 flex-col py-8"
+      >
         <div className="group/sidebar flex flex-col h-full w-20 hover:w-60 transition-[width] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden">
           <div className="px-6 mb-10" />
           <div className="flex flex-col gap-2 px-3">
-            <NavItem href="/feed" label="Home" active={active("/feed")}>
+            <NavItem
+              href="/feed"
+              label="Home"
+              active={pathname === "/feed"}
+              c={c}
+            >
               <Home size={26} strokeWidth={1.7} />
             </NavItem>
-            <NavItem href="/search" label="Search" active={active("/search")}>
+
+            <NavItem
+              href="/search"
+              label="Search"
+              active={pathname === "/search"}
+              c={c}
+            >
               <Search size={26} strokeWidth={1.7} />
             </NavItem>
             <NavItem
               href="/explore"
               label="Explore"
-              active={active("/explore")}
+              active={pathname === "/explore"}
+              c={c}
             >
               <Compass size={26} strokeWidth={1.7} />
             </NavItem>
-            <NavItem href="/upload" label="Create" active={active("/upload")}>
+
+            <NavItem
+              href="/upload"
+              label="Create"
+              active={pathname === "/upload"}
+              c={c}
+            >
               <Upload size={26} strokeWidth={1.7} />
             </NavItem>
             {loading ? (
@@ -192,12 +241,18 @@ export default function NavBar() {
               <NavItem
                 href={`/profile/${username}`}
                 label="Profile"
-                active={active(`/profile/${username}`)}
+                active={pathname === `/profile/${username}`}
+                c={c}
               >
                 <UserIcon size={26} strokeWidth={1.7} />
               </NavItem>
             ) : (
-              <NavItem href="/login" label="Login" active={active("/login")}>
+              <NavItem
+                href="/login"
+                label="Login"
+                active={pathname === "/login"}
+                c={c}
+              >
                 <UserIcon size={26} strokeWidth={1.7} />
               </NavItem>
             )}
@@ -207,7 +262,16 @@ export default function NavBar() {
             {isOwnProfile && (
               <button
                 onClick={() => router.push("/settings")}
-                className="flex items-center gap-5 px-4 py-3 rounded-xl transition-colors duration-200 text-neutral-400 hover:text-white hover:bg-neutral-900/80 w-full"
+                style={{ color: c.textMuted }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = c.text;
+                  e.currentTarget.style.background = c.cardMuted;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = c.textMuted;
+                  e.currentTarget.style.background = "transparent";
+                }}
+                className="flex items-center gap-5 px-4 py-3 rounded-xl transition-colors duration-200 w-full"
               >
                 <div className="min-w-7 flex justify-center">
                   <Settings size={26} strokeWidth={1.7} />
@@ -220,7 +284,16 @@ export default function NavBar() {
             {user ? (
               <button
                 onClick={() => void handleSignOut()}
-                className="flex items-center gap-5 px-4 py-3 rounded-xl transition-colors duration-200 text-neutral-400 hover:text-white hover:bg-neutral-900/80 w-full"
+                style={{ color: c.textMuted }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = c.text;
+                  e.currentTarget.style.background = c.cardMuted;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = c.textMuted;
+                  e.currentTarget.style.background = "transparent";
+                }}
+                className="flex items-center gap-5 px-4 py-3 rounded-lg transition-colors duration-200 w-full"
               >
                 <div className="min-w-7 flex justify-center">
                   <LogOut size={26} strokeWidth={1.7} />
@@ -230,7 +303,12 @@ export default function NavBar() {
                 </span>
               </button>
             ) : (
-              <NavItem href="/login" label="Log in" active={active("/login")}>
+              <NavItem
+                href="/login"
+                label="Log in"
+                active={pathname === "/login"}
+                c={c}
+              >
                 <LogOut size={26} strokeWidth={1.7} className="rotate-180" />
               </NavItem>
             )}
@@ -246,16 +324,29 @@ function NavItem({
   label,
   active,
   children,
+  c,
 }: {
   href: string;
   label: string;
-  active: string;
+  active: boolean;
   children: React.ReactNode;
+  c: (typeof THEME_COLORS)[keyof typeof THEME_COLORS];
 }) {
   return (
     <Link
       href={href}
-      className={`flex items-center gap-5 px-4 py-3 rounded-xl transition-colors duration-200 ${active} hover:bg-neutral-900/80`}
+      style={{
+        color: active ? c.text : c.textMuted,
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.color = c.text;
+        e.currentTarget.style.background = c.cardMuted;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.color = active ? c.text : c.textMuted;
+        e.currentTarget.style.background = "transparent";
+      }}
+      className="flex items-center gap-5 px-4 py-3 rounded-xl transition-colors duration-200"
     >
       <div className="min-w-7 flex justify-center">{children}</div>
       <span className="opacity-0 -translate-x-3 group-hover/sidebar:opacity-100 group-hover/sidebar:translate-x-0 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] delay-75 text-[15px] font-medium tracking-tight whitespace-nowrap">

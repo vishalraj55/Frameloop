@@ -6,6 +6,7 @@ import { useEffect, useState, useSyncExternalStore, useRef } from "react";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { Plus } from "lucide-react";
+import { useTheme, THEME_COLORS } from "@/context/ThemeContext";
 
 interface StoryType {
   id: string;
@@ -216,6 +217,8 @@ async function compressVideo(file: File): Promise<Blob> {
 export default function StoriesBar() {
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
+  const { resolvedTheme } = useTheme();
+  const c = THEME_COLORS[resolvedTheme];
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
@@ -365,7 +368,10 @@ export default function StoriesBar() {
   };
 
   return (
-    <section className="bg-black overflow-x-auto scrollbar-hide">
+    <section
+      className="overflow-x-auto scrollbar-hide"
+      style={{ background: c.bg }}
+    >
       <div className="flex gap-6 px-6 py-6 w-max">
         <input
           ref={fileInputRef}
@@ -381,14 +387,18 @@ export default function StoriesBar() {
             className="flex flex-col items-center gap-1 w-16.5"
           >
             <div
-              className={`relative p-0.5 rounded-full ${
+              className={`relative p-1 rounded-full ${
                 hasUnseenOwnStory
                   ? "bg-linear-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888]"
-                  : "bg-[#262626]"
+                  : ""
               }`}
+              style={!hasUnseenOwnStory ? { background: c.border } : undefined}
             >
-              <div className="p-0.5 rounded-full bg-black">
-                <div className="relative w-21 h-21 rounded-full bg-[#1c1c1c] flex items-center justify-center overflow-hidden">
+              <div className="p-0.5 rounded-full" style={{ background: c.bg }}>
+                <div
+                  className="relative w-21 h-21 rounded-full flex items-center justify-center overflow-hidden"
+                  style={{ background: c.card }}
+                >
                   {ownGroup.avatarUrl ? (
                     <Image
                       src={ownGroup.avatarUrl}
@@ -397,7 +407,10 @@ export default function StoriesBar() {
                       className="object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-white text-xl font-medium">
+                    <div
+                      className="w-full h-full flex items-center justify-center text-xl font-medium"
+                      style={{ color: c.text }}
+                    >
                       {ownGroup.username?.[0]?.toUpperCase() ?? "?"}
                     </div>
                   )}
@@ -414,13 +427,16 @@ export default function StoriesBar() {
                 className="absolute bottom-0 right-0 w-5 h-5 rounded-full bg-[#0095f6] border-2 border-black flex items-center justify-center disabled:opacity-60"
               >
                 {uploading ? (
-                  <div className="w-2.5 h-2.5 border-[1.5px] border-white/40 border-t-white rounded-full animate-spin" />
+                  <div className="w-2.5 h-2.5 border-[1.5px] border-white/40 border-t-white rounded-full animate-spin"style={{ color: c.text }} />
                 ) : (
-                  <Plus size={10} className="text-white" strokeWidth={3} />
+                  <Plus size={10} strokeWidth={3} />
                 )}
               </button>
             </div>
-            <span className="text-[11px] text-white w-full text-center truncate">
+            <span
+              className="text-[11px] w-full text-center truncate"
+              style={{ color: c.text }}
+            >
               {uploading ? uploadLabel : "Your story"}
             </span>
           </Link>
@@ -430,27 +446,42 @@ export default function StoriesBar() {
             disabled={uploading}
             className="flex flex-col items-center gap-1 w-16.5 cursor-pointer disabled:opacity-60"
           >
-            <div className="p-0.5 rounded-full bg-[#262626]">
-              <div className="p-0.5 rounded-full bg-black">
-                <div className="relative w-21 h-21 rounded-full bg-[#1c1c1c] flex items-center justify-center">
+            <div
+              className="p-0.5 rounded-full"
+              style={{ background: c.border }}
+            >
+              <div className="p-0.5 rounded-full" style={{ background: c.bg }}>
+                <div
+                  className="relative w-21 h-21 rounded-full"
+                  style={{ background: c.card }}
+                >
                   {uploading ? (
                     <div className="w-5 h-5 border-2 border-neutral-600 border-t-white rounded-full animate-spin" />
                   ) : (
-                    <div className="w-6 h-6 rounded-full bg-[#0095f6] flex items-center justify-center">
-                      <Plus size={14} className="text-white" strokeWidth={3} />
+                    <div
+                      className="w-full h-full flex items-center justify-center text-xl font-medium"
+                      style={{ color: c.text }}
+                    >
+                      <Plus size={14} strokeWidth={3} />
                     </div>
                   )}
                 </div>
               </div>
             </div>
-            <span className="text-[11px] text-white w-full text-center truncate">
+            <span
+              className="text-[11px] w-full text-center truncate"
+              style={{ color: c.text }}
+            >
               {uploadLabel}
             </span>
           </button>
         )}
 
         {fetchError && stories.length === 0 && (
-          <div className="flex items-center text-[11px] text-[#8e8e8e] px-2">
+          <div
+            className="flex items-center text-[11px] px-2"
+            style={{ color: c.textMuted }}
+          >
             Couldn&apos;t load stories
           </div>
         )}
@@ -467,14 +498,23 @@ export default function StoriesBar() {
               className="flex flex-col items-center gap-1 w-21"
             >
               <div
-                className={`p-0.5 rounded-full ${
-                  isSeen
-                    ? "bg-[#262626]"
-                    : "bg-linear-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888]"
+                className={`relative p-0.5 rounded-full ${
+                  hasUnseenOwnStory
+                    ? "bg-linear-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888]"
+                    : ""
                 }`}
+                style={
+                  !hasUnseenOwnStory ? { background: c.border } : undefined
+                }
               >
-                <div className="p-0.5 rounded-full bg-black">
-                  <div className="relative w-21 h-21 rounded-full overflow-hidden bg-[#1c1c1c]">
+                <div
+                  className="p-0.5 rounded-full"
+                  style={{ background: c.bg }}
+                >
+                  <div
+                    className="relative w-21 h-21 rounded-full overflow-hidden"
+                    style={{ background: c.card }}
+                  >
                     {group.avatarUrl ? (
                       <Image
                         src={group.avatarUrl}
@@ -483,7 +523,10 @@ export default function StoriesBar() {
                         className="object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-white text-xl font-medium">
+                      <div
+                        className="w-full h-full flex items-center justify-center text-xl font-medium"
+                        style={{ color: c.text }}
+                      >
                         {displayName[0]?.toUpperCase() ?? "?"}
                       </div>
                     )}
@@ -491,9 +534,8 @@ export default function StoriesBar() {
                 </div>
               </div>
               <span
-                className={`text-[11px] w-full text-center truncate ${
-                  isSeen ? "text-[#8e8e8e]" : "text-white"
-                }`}
+                className="text-[11px] w-full text-center truncate"
+                style={{ color: isSeen ? c.textMuted : c.text }}
               >
                 {displayName}
               </span>

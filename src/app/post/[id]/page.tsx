@@ -3,6 +3,7 @@
 import { Suspense, use, useEffect, useRef, useState } from "react";
 import { notFound, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useTheme, THEME_COLORS } from "@/context/ThemeContext";
 import Post from "@/components/Post";
 
 interface PostData {
@@ -23,6 +24,8 @@ function PostPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const { resolvedTheme } = useTheme();
+  const c = THEME_COLORS[resolvedTheme];
   const searchParams = useSearchParams();
   const isExplore = searchParams.get("source") === "explore";
 
@@ -87,28 +90,44 @@ function PostPage({ params }: { params: Promise<{ id: string }> }) {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-black flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+      <main
+        className="min-h-screen flex items-center justify-center"
+        style={{ background: c.bg }}
+      >
+        <div
+          className="w-6 h-6 rounded-full animate-spin"
+          style={{ border: `2px solid ${c.border}`, borderTopColor: c.text }}
+        />
       </main>
     );
   }
 
   return (
-    <main className="mx-auto max-w-160 min-h-screen bg-black">
+    <main className="mx-auto max-w-160 min-h-screen" style={{ background: c.bg }}>
       <div
-        className="sticky top-0 z-10 flex items-center px-4 py-3 border-b border-neutral-800"
-        style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(12px)" }}
+        className="sticky top-0 z-10 flex items-center px-4 py-3 border-b"
+        style={{
+          background:
+            resolvedTheme === "dark"
+              ? "rgba(0,0,0,0.75)"
+              : "rgba(255,255,255,0.75)",
+          backdropFilter: "blur(12px)",
+          borderColor: c.border,
+        }}
       >
         <button
           onClick={() => router.back()}
-          className="text-white absolute left-4"
+          className="absolute left-4"
+          style={{ color: c.text }}
           aria-label="Go back"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M15 18l-6-6 6-6" />
           </svg>
         </button>
-        <p className="text-white font-semibold text-[15px] mx-auto">Posts</p>
+        <p className="font-semibold text-[15px] mx-auto" style={{ color: c.text }}>
+          Posts
+        </p>
       </div>
 
       <div className="flex flex-col items-center">
@@ -116,8 +135,8 @@ function PostPage({ params }: { params: Promise<{ id: string }> }) {
           <div
             key={post.id}
             ref={post.id === id ? focusedRef : undefined}
-            className="w-full border-b border-neutral-800"
-            style={{ maxWidth: "480px" }}
+            className="w-full border-b"
+            style={{ maxWidth: "480px", borderColor: c.border }}
           >
             <Post
               id={post.id}
