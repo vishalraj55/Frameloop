@@ -83,7 +83,7 @@ export default function NavBar() {
       {/* Mobile bottom nav */}
       <nav className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 md:hidden">
         <div
-          className="relative flex items-center justify-around gap-2 px-3 h-18 rounded-full backdrop-blur-2xl shadow-2xl min-w-[320px]"
+          className="relative flex items-center justify-around gap-2 px-3 h-20 rounded-full backdrop-blur-2xl shadow-2xl min-w-[320px]"
           style={{
             background: hexToRgba(
               c.card,
@@ -102,7 +102,7 @@ export default function NavBar() {
             style={{
               left: pillStyle.left,
               width: "70px",
-              height: "50px",
+              height: "55px",
               top: "50%",
               opacity: pillStyle.opacity,
               background: hexToRgba(
@@ -130,7 +130,7 @@ export default function NavBar() {
             className="relative z-10 transition-colors"
             style={{ color: pathname === "/feed" ? c.text : c.text }}
           >
-            <Home size={24} strokeWidth={1.6} />
+            <Home size={26} strokeWidth={1.5} />
           </Link>
           <Link
             ref={setRef(1)}
@@ -138,7 +138,7 @@ export default function NavBar() {
             className="relative z-10 transition-colors"
             style={{ color: pathname === "/search" ? c.text : c.text }}
           >
-            <Search size={24} strokeWidth={1.6} />
+            <Search size={26} strokeWidth={1.6} />
           </Link>
           <Link
             ref={setRef(2)}
@@ -146,7 +146,7 @@ export default function NavBar() {
             className="relative z-10 transition-colors"
             style={{ color: pathname === "/upload" ? c.text : c.text }}
           >
-            <Upload size={24} strokeWidth={1.6} />
+            <Upload size={26} strokeWidth={1.6} />
           </Link>
           <Link
             ref={setRef(3)}
@@ -154,7 +154,7 @@ export default function NavBar() {
             className="relative z-10 transition-colors"
             style={{ color: pathname === "/explore" ? c.text : c.text }}
           >
-            <Compass size={24} strokeWidth={1.6} />
+            <Compass size={26} strokeWidth={1.6} />
           </Link>
           {loading ? (
             <div className="w-6 h-6 relative z-10" />
@@ -182,9 +182,9 @@ export default function NavBar() {
               ref={setRef(4)}
               href="/login"
               className="relative z-10 transition-colors"
-              style={{ color: pathname === "/login" ? c.text : c.textMuted }}
+              style={{ color: pathname === "/login" ? c.text : c.text }}
             >
-              <UserIcon size={24} strokeWidth={1.6} />
+              <UserIcon size={26} strokeWidth={1.6} />
             </Link>
           )}
         </div>

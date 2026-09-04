@@ -76,7 +76,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="py-45 flex mx-auto">
+    <main className="py-40 flex mx-auto">
       {/* Form panel */}
       <div className="flex-1 flex items-center justify-center px-6 py-16">
         <div className="w-full max-w-sm">
@@ -216,7 +216,7 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#D4AF6A] hover:bg-[#E2BF7D] text-[#1A1714] text-sm font-semibold py-2.5 mb-6 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-full bg-[#D4AF6A] hover:bg-[#E2BF7D] text-[#d4bba3] text-sm font-semibold py-2.5 mb-6 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {loading ? "Signing up..." : "Sign up"}
             </button>

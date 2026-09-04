@@ -164,7 +164,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen" style={{ background: c.bg, color: c.text }}>
-      <div className="max-w-233.75 mx-auto">
+      <div className="max-w-240 mx-auto">
         {/* Profile header */}
         <div className="flex items-center gap-5 px-4 pt-6 pb-4 md:gap-15 md:px-8 md:pt-10 md:pb-6">
           {/* Avatar */}
@@ -184,7 +184,7 @@ export default function ProfilePage() {
             >
               <div className="p-0.75 rounded-full" style={{ background: c.bg }}>
                 <div
-                  className="relative w-19.25 h-19.25 md:w-37.5 md:h-37.5 rounded-full overflow-hidden"
+                  className="relative w-25 h-25 md:w-35 md:h-35 rounded-full overflow-hidden"
                   style={{ background: c.card }}
                 >
                   {profile.avatarUrl ? (
@@ -225,9 +225,9 @@ export default function ProfilePage() {
               )}
             </div>
 
-            <div className="flex justify-around md:justify-start md:gap-10 mb-4">
-              <div className="text-center md:text-left">
-                <span className="block md:inline text-[15px] font-semibold">
+            <div className="flex justify-start md:justify-start md:gap-10 mb-4 gap-15">
+              <div className="text-left md:text-left ">
+                <span className="block md:inline text-[15px] font-semibold ">
                   {profile.posts.length}
                 </span>
                 <span className="block md:inline text-[12px] md:text-[16px] text-[#8e8e8e] md:ml-1">
@@ -237,7 +237,7 @@ export default function ProfilePage() {
 
               <button
                 onClick={() => router.push(`/users/${username}/followers`)}
-                className="text-center md:text-left"
+                className="text-left md:text-left"
               >
                 <span className="block md:inline text-[15px] font-semibold">
                   {(profile.followersCount ?? 0).toLocaleString()}
@@ -249,7 +249,7 @@ export default function ProfilePage() {
 
               <button
                 onClick={() => router.push(`/users/${username}/following`)}
-                className="text-center md:text-left"
+                className="text-left md:text-left"
               >
                 <span className="block md:inline text-[15px] font-semibold">
                   {(profile.followingCount ?? 0).toLocaleString()}
