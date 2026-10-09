@@ -21,9 +21,9 @@ export default function MessagesDock() {
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="flex items-center justify-between gap-2 h-16 pl-5 pr-3 text-white transition-[filter] hover:brightness-125"
+          className="flex items-center justify-between gap-2 h-15 pl-5 pr-3 text-white transition-[filter] hover:brightness-125"
           style={{
-            width: 280,
+            width: 250,
             background: "rgba(58,61,68,0.55)",
             backdropFilter: "blur(24px) saturate(1.5)",
             WebkitBackdropFilter: "blur(24px) saturate(1.5)",
