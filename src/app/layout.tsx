@@ -4,6 +4,7 @@ import NavBar from "@/components/BottomNav";
 import type { Metadata, Viewport } from "next";
 import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
+import MessagesDock from "@/components/MessagesDock";
 
 export const metadata: Metadata = {
   title: "Frameloops",
@@ -52,6 +53,7 @@ export default function RootLayout({
             <div className="block">
               <TopBar />
             </div>
+            <MessagesDock />
             <div>
               <NavBar />
             </div>
