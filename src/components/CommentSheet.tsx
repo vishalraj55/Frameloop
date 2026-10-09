@@ -13,8 +13,9 @@ import {
   Flag,
   ChevronDown,
   ChevronUp,
-  Smile,
 } from "lucide-react";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 interface Author {
   id: string;
@@ -39,10 +40,13 @@ interface Props {
   open: boolean;
   onClose: () => void;
   postAuthor?: Author;
-  postCaption?: string;
+  postCaption?: string | null;
   postCreatedAt?: string;
   anchorRef?: React.RefObject<HTMLElement>;
 }
+
+const GLASS =
+  "bg-white/50 dark:bg-black/40 backdrop-blur-2xl backdrop-saturate-150 border border-black/10 dark:border-white/10 shadow-2xl";
 
 function getRelativeTime(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -67,16 +71,54 @@ function Avatar({
 }) {
   return (
     <div
-      className="relative rounded-full overflow-hidden shrink-0 bg-neutral-700"
+      className="relative rounded-full overflow-hidden shrink-0 bg-neutral-300 dark:bg-neutral-700"
       style={{ width: size, height: size }}
     >
       {src ? (
         <Image src={src} alt="" fill className="object-cover" />
       ) : (
-        <div className="w-full h-full flex items-center justify-center text-xs font-semibold text-white">
+        <div className="w-full h-full flex items-center justify-center text-xs font-semibold text-neutral-800 dark:text-white">
           {name?.[0]?.toUpperCase() ?? "?"}
         </div>
       )}
+    </div>
+  );
+}
+
+function PostHeader({
+  author,
+  caption,
+  createdAt,
+}: {
+  author?: Author;
+  caption?: string | null;
+  createdAt?: string;
+}) {
+  if (!author && !caption) return null;
+  return (
+    <div className="flex items-start gap-3 px-5 py-3 border-b border-black/10 dark:border-white/10 shrink-0">
+      <Avatar
+        src={author?.avatarUrl}
+        name={author?.username ?? "User"}
+        size={36}
+      />
+      <div className="flex-1 min-w-0">
+        <p className="text-neutral-900 dark:text-white text-sm leading-snug wrap-break-word">
+          <span className="font-semibold mr-1.5">
+            {author?.username ?? "User"}
+          </span>
+          {caption && (
+            <span className="text-neutral-700 dark:text-neutral-200">
+              {caption}
+            </span>
+          )}
+        </p>
+        {createdAt && (
+          <p className="text-neutral-500 text-xs mt-1">
+            {getRelativeTime(createdAt)}
+          </p>
+        )}
+      </div>
     </div>
   );
 }
@@ -89,6 +131,9 @@ function CommentInput({
   onPost,
   onCancelReply,
   inputRef,
+  avatarUrl,
+  avatarName,
+  bordered = false,
 }: {
   text: string;
   setText: (v: string) => void;
@@ -97,14 +142,21 @@ function CommentInput({
   onPost: () => void;
   onCancelReply: () => void;
   inputRef: React.RefObject<HTMLInputElement | null>;
+  avatarUrl?: string | null;
+  avatarName?: string | null;
+  bordered?: boolean;
 }) {
   return (
-    <div className="border-t border-neutral-800 shrink-0">
+    <div
+      className={`shrink-0 ${
+        bordered ? "border-t border-black/10 dark:border-white/10" : ""
+      }`}
+    >
       {replyingTo && (
         <div className="flex items-center justify-between px-4 pt-2.5">
-          <span className="text-neutral-400 text-xs">
+          <span className="text-neutral-500 dark:text-neutral-400 text-xs">
             Replying to{" "}
-            <span className="text-white font-semibold">
+            <span className="text-neutral-900 dark:text-white font-semibold">
               @{replyingTo.username}
             </span>
           </span>
@@ -113,32 +165,35 @@ function CommentInput({
           </button>
         </div>
       )}
+
       <div className="flex items-center gap-3 px-4 py-3">
-        <button className="text-neutral-400 hover:text-white transition-colors shrink-0">
-          <Smile size={22} />
-        </button>
-        <input
-          ref={inputRef}
-          type="text"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") onPost();
-          }}
-          placeholder={
-            replyingTo
-              ? `Reply to @${replyingTo.username}...`
-              : "Add a comment..."
-          }
-          className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-neutral-500"
-        />
-        <button
-          onClick={onPost}
-          disabled={!text.trim() || posting}
-          className="text-[#0095f6] text-sm font-semibold disabled:opacity-30 transition-opacity shrink-0"
-        >
-          Post
-        </button>
+        <Avatar src={avatarUrl} name={avatarName ?? "?"} size={36} />
+        <div className="flex flex-1 items-center gap-2 rounded-full border border-black/10 dark:border-white/15 bg-black/5 dark:bg-white/5 pl-4 pr-3 py-2">
+          <input
+            ref={inputRef}
+            type="text"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") onPost();
+            }}
+            placeholder={
+              replyingTo
+                ? `Reply to @${replyingTo.username}...`
+                : "Add a comment..."
+            }
+            className="flex-1 min-w-0 bg-transparent text-neutral-900 dark:text-white text-sm outline-none placeholder:text-neutral-500"
+          />
+          {text.trim() && (
+            <button
+              onClick={onPost}
+              disabled={posting}
+              className="text-[#0095f6] text-sm font-semibold disabled:opacity-30 transition-opacity shrink-0"
+            >
+              Post
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -172,10 +227,22 @@ export default function CommentSheet({
 
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
 
+  const [fetchedPost, setFetchedPost] = useState<{
+    author?: Author;
+    caption?: string | null;
+    createdAt?: string;
+  } | null>(null);
+
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   const userId = user?.uid ?? "";
+  const userLabel = user ? (user.displayName ?? user.email ?? "?") : "?";
+
+  const headerAuthor = postAuthor ?? fetchedPost?.author;
+  const headerCaption = postCaption ?? fetchedPost?.caption;
+  const headerCreatedAt = postCreatedAt ?? fetchedPost?.createdAt;
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
@@ -203,6 +270,29 @@ export default function CommentSheet({
   }, [open, postId]);
 
   useEffect(() => {
+    if (!open || (postAuthor && postCaption)) return;
+    const loadPost = async () => {
+      try {
+        const res = await fetch(`${API_URL}/posts/${postId}`);
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          author?: Author;
+          caption?: string | null;
+          createdAt?: string;
+        };
+        setFetchedPost({
+          author: data.author,
+          caption: data.caption,
+          createdAt: data.createdAt,
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    void loadPost();
+  }, [open, postId, postAuthor, postCaption]);
+
+  useEffect(() => {
     const handler = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
       if (!target.closest("[data-menu]")) {
@@ -212,6 +302,24 @@ export default function CommentSheet({
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!window.matchMedia("(min-width: 768px)").matches) return;
+      if (panelRef.current?.contains(e.target as Node)) return;
+      onClose();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("wheel", onWheel, { passive: true });
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("wheel", onWheel);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open, onClose]);
 
   const handlePost = async () => {
     if (!text.trim() || !user) return;
@@ -272,9 +380,7 @@ export default function CommentSheet({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ commentId, userId }),
       });
-      console.log("DELETE response status:", res.status);
       if (!res.ok) {
-        // Rollback on failure
         const rollback = await fetch(`/api/posts/${postId}/comments`);
         const data = (await rollback.json()) as Comment[];
         setComments(data);
@@ -404,7 +510,7 @@ export default function CommentSheet({
                   setEditText("");
                 }
               }}
-              className="flex-1 bg-neutral-700 text-white text-sm px-3 py-1.5 rounded-lg outline-none"
+              className="flex-1 bg-black/5 dark:bg-white/10 text-neutral-900 dark:text-white text-sm px-3 py-1.5 rounded-lg outline-none"
             />
             <button
               onClick={() => void handleEditSave(comment.id, parentId)}
@@ -424,7 +530,7 @@ export default function CommentSheet({
           </div>
         ) : (
           <>
-            <p className="text-white text-sm leading-snug">
+            <p className="text-neutral-900 dark:text-white text-sm leading-snug">
               <span className="font-semibold mr-1">
                 {comment.author.username}
               </span>
@@ -432,7 +538,7 @@ export default function CommentSheet({
                 className={
                   comment.isDeleted
                     ? "text-neutral-500 italic"
-                    : "text-neutral-200"
+                    : "text-neutral-700 dark:text-neutral-200"
                 }
               >
                 {comment.isDeleted ? "This comment was deleted." : comment.text}
@@ -457,7 +563,7 @@ export default function CommentSheet({
                       });
                       inputRef.current?.focus();
                     }}
-                    className="text-neutral-500 hover:text-white text-xs font-semibold transition-colors"
+                    className="text-neutral-500 hover:text-neutral-900 dark:hover:text-white text-xs font-semibold transition-colors"
                   >
                     Reply
                   </button>
@@ -478,7 +584,7 @@ export default function CommentSheet({
               className={
                 comment.likedByMe
                   ? "fill-red-500 text-red-500"
-                  : "text-neutral-400 hover:text-neutral-200"
+                  : "text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-200"
               }
             />
           </button>
@@ -487,12 +593,12 @@ export default function CommentSheet({
               onClick={() =>
                 setMenuOpenId(menuOpenId === comment.id ? null : comment.id)
               }
-              className="text-neutral-500 hover:text-white transition-colors p-1 rounded-full hover:bg-neutral-700 opacity-0 group-hover:opacity-100"
+              className="text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10 opacity-0 group-hover:opacity-100"
             >
               <MoreHorizontal size={15} />
             </button>
             {menuOpenId === comment.id && (
-              <div className="absolute right-0 top-7 z-20 bg-neutral-900 shadow-2xl border border-neutral-700/60 overflow-hidden min-w-40 py-1 rounded-md text-left">
+              <div className="absolute right-0 top-7 z-20 bg-white dark:bg-neutral-900 shadow-2xl border border-black/10 dark:border-white/10 overflow-hidden min-w-40 py-1 rounded-md text-left">
                 {comment.author.id === userId ? (
                   <>
                     <button
@@ -501,24 +607,24 @@ export default function CommentSheet({
                         setEditText(comment.text);
                         setMenuOpenId(null);
                       }}
-                      className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-neutral-200 hover:bg-neutral-800 hover:text-white transition-colors"
+                      className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-neutral-800 dark:text-neutral-200 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
                     >
-                      <Pencil size={13} className="text-neutral-400" />
+                      <Pencil size={13} className="text-neutral-500" />
                       <span>Edit</span>
                     </button>
-                    <div className="mx-3 h-px bg-neutral-700/60" />
+                    <div className="mx-3 h-px bg-black/10 dark:bg-white/10" />
                     <button
                       onClick={() => void handleDelete(comment.id, parentId)}
-                      className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-400 hover:bg-neutral-800 hover:text-red-300 transition-colors"
+                      className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
                     >
-                      <Trash2 size={13} className="text-red-400" />
+                      <Trash2 size={13} className="text-red-500" />
                       <span>Delete</span>
                     </button>
                   </>
                 ) : (
                   <button
                     onClick={() => void handleReport(comment.id)}
-                    className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-orange-400 hover:bg-neutral-700 transition-colors"
+                    className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-orange-500 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
                   >
                     <Flag size={14} /> Report
                   </button>
@@ -535,13 +641,15 @@ export default function CommentSheet({
     if (loading)
       return (
         <div className="flex justify-center py-8">
-          <div className="w-5 h-5 border-2 border-neutral-700 border-t-white rounded-full animate-spin" />
+          <div className="w-5 h-5 border-2 border-neutral-400 dark:border-neutral-700 border-t-neutral-900 dark:border-t-white rounded-full animate-spin" />
         </div>
       );
     if (comments.length === 0)
       return (
         <div className="flex flex-col items-center justify-center py-12 gap-2">
-          <p className="text-white text-sm font-semibold">No comments yet</p>
+          <p className="text-neutral-900 dark:text-white text-sm font-semibold">
+            No comments yet
+          </p>
           <p className="text-neutral-500 text-xs">Start the conversation</p>
         </div>
       );
@@ -553,9 +661,9 @@ export default function CommentSheet({
             {(comment.replies?.length ?? 0) > 0 && (
               <button
                 onClick={() => toggleReplies(comment.id)}
-                className="ml-11 flex items-center gap-2 text-neutral-500 hover:text-white text-xs font-semibold transition-colors w-fit"
+                className="ml-11 flex items-center gap-2 text-neutral-500 hover:text-neutral-900 dark:hover:text-white text-xs font-semibold transition-colors w-fit"
               >
-                <span className="w-5 h-px bg-neutral-600 inline-block" />
+                <span className="w-5 h-px bg-neutral-400 dark:bg-neutral-600 inline-block" />
                 {expandedReplies.has(comment.id) ? (
                   <>
                     <ChevronUp size={12} /> Hide replies
@@ -586,96 +694,90 @@ export default function CommentSheet({
     onPost: () => void handlePost(),
     onCancelReply: () => setReplyingTo(null),
     inputRef,
+    avatarUrl: user?.photoURL,
+    avatarName: userLabel,
   };
 
   if (!open) return null;
 
   return (
     <>
-      {/*Mobile bottom sheet*/}
       <div className="md:hidden">
         <div className="fixed inset-0 z-40 bg-black/60" onClick={onClose} />
         <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center">
           <div
-            className="w-full max-w-lg bg-[#1c1c1c] rounded-t-2xl flex flex-col overflow-hidden"
+            className="w-full max-w-lg rounded-t-2xl flex flex-col overflow-hidden bg-white/80 dark:bg-[#1c1c1c]/80 backdrop-blur-2xl border border-black/10 dark:border-white/10"
             style={{ maxHeight: "80vh" }}
           >
-            <div className="relative flex items-center justify-between px-4 py-3 border-b border-neutral-800 shrink-0">
-              <div className="w-10 h-1 rounded-full bg-neutral-600 absolute left-1/2 -translate-x-1/2 top-2" />
+            <div className="relative flex items-center justify-between px-4 py-3 border-b border-black/10 dark:border-white/10 shrink-0">
+              <div className="w-10 h-1 rounded-full bg-neutral-400 dark:bg-neutral-600 absolute left-1/2 -translate-x-1/2 top-2" />
               <div className="w-6" />
-              <span className="text-white text-sm font-semibold">
+              <span className="text-neutral-900 dark:text-white text-sm font-semibold">
                 Comments {comments.length > 0 && `(${comments.length})`}
               </span>
               <button onClick={onClose}>
-                <X size={20} className="text-neutral-400" />
+                <X
+                  size={20}
+                  className="text-neutral-500 dark:text-neutral-400"
+                />
               </button>
             </div>
+            <PostHeader
+              author={headerAuthor}
+              caption={headerCaption}
+              createdAt={headerCreatedAt}
+            />
             <div
               ref={listRef}
               className="flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-4"
             >
               {renderList()}
             </div>
-            <CommentInput {...inputProps} />
+            <CommentInput {...inputProps} bordered />
           </div>
         </div>
       </div>
 
-      {/*Desktop side panel */}
+      {/*Desktop floating panel */}
       <div className="hidden md:block">
         <div className="fixed inset-0 z-40" onClick={onClose} />
         <div
-          className="fixed top-0 right-0 bottom-0 z-50 flex flex-col bg-black border-l border-neutral-800 shadow-2xl"
-          style={{ width: 397 }}
+          ref={panelRef}
+          className="fixed left-70 top-55 bottom-5 z-50 w-100 max-w-[calc(100vw-2rem)]"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center justify-between px-4 py-1 border-b border-neutral-800 shrink-0">
-            <div className="flex items-center gap-3">
-              <Avatar
-                src={postAuthor?.avatarUrl}
-                name={postAuthor?.username}
-                size={36}
-              />
-              <span className="text-white text-sm font-semibold">
-                {postAuthor?.username ?? "User"}
+          <div
+            className={`h-full flex flex-col rounded-3xl overflow-hidden ${GLASS}`}
+          >
+            <div className="relative flex items-center justify-center px-5 py-4 shrink-0">
+              <button
+                onClick={onClose}
+                className="absolute left-5 text-neutral-600 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white transition-colors"
+              >
+                <X size={22} />
+              </button>
+              <span className="text-neutral-900 dark:text-white text-sm font-semibold">
+                Comments
               </span>
             </div>
-            <button
-              onClick={onClose}
-              className="text-neutral-400 hover:text-white transition-colors ml-auto"
+
+            <PostHeader
+              author={headerAuthor}
+              caption={headerCaption}
+              createdAt={headerCreatedAt}
+            />
+
+            <div
+              ref={listRef}
+              className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-5 [scrollbar-width:thin] [scrollbar-color:#9ca3af_transparent]"
             >
-              <X size={20} />
-            </button>
+              {renderList()}
+            </div>
+
+            <CommentInput {...inputProps} />
           </div>
-          <div
-            ref={listRef}
-            className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4"
-          >
-            {postCaption && postAuthor && (
-              <div className="group flex items-start gap-3">
-                <Avatar
-                  src={postAuthor.avatarUrl}
-                  name={postAuthor.username}
-                  size={32}
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-white text-sm leading-snug">
-                    <span className="font-semibold mr-1">
-                      {postAuthor.username}
-                    </span>
-                    <span className="text-neutral-200">{postCaption}</span>
-                  </p>
-                  {postCreatedAt && (
-                    <p className="text-neutral-500 text-xs mt-1.5">
-                      {getRelativeTime(postCreatedAt)}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-            {renderList()}
-          </div>
-          <CommentInput {...inputProps} />
+
+          <div className="absolute top-10 -right-1.75 w-4 h-4 rotate-45 bg-white/50 dark:bg-black/40 backdrop-blur-2xl border-t border-r border-black/10 dark:border-white/10" />
         </div>
       </div>
     </>
