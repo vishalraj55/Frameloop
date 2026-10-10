@@ -6,15 +6,26 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import {
-  Home,
   Search,
   Compass,
   User as UserIcon,
   Upload,
   Settings,
   LogOut,
+  LogIn,
+  createLucideIcon,
 } from "lucide-react";
 import { useTheme, THEME_COLORS } from "@/context/ThemeContext";
+
+const House = createLucideIcon("house", [
+  [
+    "path",
+    {
+      d: "M5 21a2 2 0 01-2-2v-9a2 2 0 01.709-1.528l7-6a2 2 0 012.582 0l7 6A2 2 0 0121 10v9a2 2 0 01-2 2h-4v-8a1 1 0 00-1-1h-4a1 1 0 00-1 1v8z",
+      key: "1ee3cq",
+    },
+  ],
+]);
 
 function hexToRgba(hex: string, alpha: number) {
   const h = hex.replace("#", "");
@@ -130,7 +141,7 @@ export default function NavBar() {
             className="relative z-10 transition-colors"
             style={{ color: pathname === "/feed" ? c.text : c.text }}
           >
-            <Home size={26} strokeWidth={1.5} />
+            <House size={26} strokeWidth={1.5} />
           </Link>
           <Link
             ref={setRef(1)}
@@ -207,7 +218,7 @@ export default function NavBar() {
               active={pathname === "/feed"}
               c={c}
             >
-              <Home size={26} strokeWidth={1.7} />
+              <House size={26} strokeWidth={1.7} />
             </NavItem>
 
             <NavItem
@@ -309,7 +320,7 @@ export default function NavBar() {
                 active={pathname === "/login"}
                 c={c}
               >
-                <LogOut size={26} strokeWidth={1.7} className="rotate-180" />
+                <LogIn size={26} strokeWidth={1.7} className="rotate-180" />
               </NavItem>
             )}
           </div>

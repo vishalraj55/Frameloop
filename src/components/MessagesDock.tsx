@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Send, Maximize2, Minimize2, X, SquarePen } from "lucide-react";
+import { MessageCircle, Maximize2, Minimize2, X, SquarePen } from "lucide-react";
 
 const GLASS =
   "bg-white/60 dark:bg-neutral-900/60 backdrop-blur-2xl backdrop-saturate-150 border border-black/10 dark:border-white/10 shadow-2xl";
@@ -24,16 +24,16 @@ export default function MessagesDock() {
           className="flex items-center justify-between gap-2 h-15 pl-5 pr-3 text-white transition-[filter] hover:brightness-125"
           style={{
             width: 250,
-            background: "rgba(58,61,68,0.55)",
+            background: "rgba(58,61,68,0.25)",
             backdropFilter: "blur(24px) saturate(1.5)",
             WebkitBackdropFilter: "blur(24px) saturate(1.5)",
             borderRadius: 9999,
-            border: "1px solid rgba(255,255,255,0.15)",
+            border: "1px solid rgba(255,255,255,0.1)",
             boxShadow: "0 8px 30px rgba(0,0,0,0.45)",
           }}
         >
-          <span className="flex items-center gap-2 text-base font-semibold px-4">
-            <Send size={24} />
+          <span className="flex items-center gap-2 text-base font-display px-4">
+            <MessageCircle size={20} />
             Messages
           </span>
           <span className="flex items-center -space-x-2 px-4">
@@ -79,7 +79,7 @@ export default function MessagesDock() {
 
           <div className="flex-1 flex flex-col items-center justify-center gap-2 px-6 text-center">
             <div className="w-14 h-14 rounded-full flex items-center justify-center border border-black/10 dark:border-white/15 mb-1">
-              <Send size={24} className="text-neutral-500" />
+              <MessageCircle size={24} className="text-neutral-500" />
             </div>
             <p className="text-neutral-900 dark:text-white text-sm font-semibold">
               Under development
